@@ -26,6 +26,7 @@ library
                        LambdaQuest.SystemF.Type,
                        LambdaQuest.SystemF.PrettyPrint,
                        LambdaQuest.SystemF.Parse,
-                       LambdaQuest.SystemF.TypeCheck
+                       LambdaQuest.SystemF.TypeCheck,
+                       LambdaQuest.SystemF.Eval
   ghc-options:         -Wincomplete-patterns
   build-depends:       parsec
