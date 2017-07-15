@@ -39,6 +39,24 @@ prettyPrintTermP p tyctx ctx t = case t of
   TPrimValue (PVInt x) -> shows x
   TPrimValue (PVReal x) -> shows x
   TPrimValue (PVBool x) -> shows x
+  TPrimValue (PVBuiltinUnary f) -> showString $ case f of
+    BNegateInt -> "negateInt"
+    BNegateReal -> "negateReal"
+    BIntToReal -> "intToReal"
+  TPrimValue (PVBuiltinBinary f) -> showString $ case f of
+    BAddInt -> "addInt"
+    BSubInt -> "subInt"
+    BMulInt -> "mulInt"
+    BLtInt -> "ltInt"
+    BLeInt -> "leInt"
+    BEqualInt -> "equalInt"
+    BAddReal -> "addReal"
+    BSubReal -> "subReal"
+    BMulReal -> "mulReal"
+    BDivReal -> "divReal"
+    BLtReal -> "ltReal"
+    BLeReal -> "leReal"
+    BEqualReal -> "equalReal"
   TAbs name ty body -> let name' = rename ctx name
                        in showParen (p > 0) $ showChar '\\' . showString name' . showChar ':' . prettyPrintTypeP 1 tyctx ty . showString ". " . prettyPrintTermP 0 tyctx (name' : ctx) body
   TTyAbs name body -> let name' = rename ctx name

@@ -16,9 +16,31 @@ pattern TyInt = TyPrim PTyInt
 pattern TyReal = TyPrim PTyReal
 pattern TyBool = TyPrim PTyBool
 
+data BuiltinUnaryFn = BNegateInt
+                    | BNegateReal
+                    | BIntToReal
+                    deriving (Eq,Show,Enum,Bounded)
+
+data BuiltinBinaryFn = BAddInt
+                     | BSubInt
+                     | BMulInt
+                     | BLtInt
+                     | BLeInt
+                     | BEqualInt
+                     | BAddReal
+                     | BSubReal
+                     | BMulReal
+                     | BDivReal
+                     | BLtReal
+                     | BLeReal
+                     | BEqualReal
+                     deriving (Eq,Show,Enum,Bounded)
+
 data PrimValue = PVInt !Integer
                | PVReal !Double
                | PVBool !Bool
+               | PVBuiltinUnary !BuiltinUnaryFn
+               | PVBuiltinBinary !BuiltinBinaryFn
                deriving (Eq,Show)
 
 data Term = TPrimValue !PrimValue -- primitive value
@@ -35,6 +57,7 @@ isValue t = case t of
   TPrimValue _ -> True
   TAbs _ _ _ -> True
   TTyAbs _ _ -> True
+  TApp (TPrimValue (PVBuiltinBinary _)) x -> isValue x -- partial application
   _ -> False
 
 instance Eq Type where

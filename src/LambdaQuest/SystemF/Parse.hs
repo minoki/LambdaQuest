@@ -7,6 +7,25 @@ import Data.Foldable (foldl')
 
 type Parser = Parsec String ()
 
+builtinFunctions :: [(String,PrimValue)]
+builtinFunctions = [("negateInt",PVBuiltinUnary BNegateInt)
+                   ,("negateReal",PVBuiltinUnary BNegateReal)
+                   ,("intToReal",PVBuiltinUnary BIntToReal)
+                   ,("addInt",PVBuiltinBinary BAddInt)
+                   ,("subInt",PVBuiltinBinary BSubInt)
+                   ,("mulInt",PVBuiltinBinary BMulInt)
+                   ,("ltInt",PVBuiltinBinary BLtInt)
+                   ,("leInt",PVBuiltinBinary BLeInt)
+                   ,("equalInt",PVBuiltinBinary BEqualInt)
+                   ,("addReal",PVBuiltinBinary BAddReal)
+                   ,("subReal",PVBuiltinBinary BSubReal)
+                   ,("mulReal",PVBuiltinBinary BMulReal)
+                   ,("divReal",PVBuiltinBinary BDivReal)
+                   ,("ltReal",PVBuiltinBinary BLtReal)
+                   ,("leReal",PVBuiltinBinary BLeReal)
+                   ,("equalReal",PVBuiltinBinary BEqualReal)
+                   ]
+
 langDef = PT.LanguageDef { PT.commentStart = ""
                          , PT.commentEnd = ""
                          , PT.commentLine = ""
@@ -15,7 +34,7 @@ langDef = PT.LanguageDef { PT.commentStart = ""
                          , PT.identLetter = alphaNum <|> char '_'
                          , PT.opStart = oneOf ":!#$%&*+./<=>?@\\^|-~"
                          , PT.opLetter = oneOf ":!#$%&*+./<=>?@\\^|-~"
-                         , PT.reservedNames = ["if","then","else","True","False","forall","as","Int","Real","Bool","let","in"]
+                         , PT.reservedNames = ["if","then","else","True","False","forall","as","Int","Real","Bool","let","in"] ++ map fst builtinFunctions
                          , PT.reservedOpNames = []
                          , PT.caseSensitive = True
                          }
@@ -65,6 +84,7 @@ simpleTerm tyctx ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
                        <|> (try ((TPrimValue . PVReal) <$> float) <?> "floating point literal")
                        <|> (((TPrimValue . PVInt) <$> natural) <?> "integer literal")
                        <|> parens (term tyctx ctx)
+                       <|> choice [reserved name >> return (TPrimValue v) | (name,v) <- builtinFunctions]
                        <|> (do name <- identifier <?> "variable"
                                case name `elemIndex` ctx of
                                  Just i -> return (TRef i)
