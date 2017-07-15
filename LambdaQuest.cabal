@@ -24,6 +24,7 @@ library
   exposed-modules:     LambdaQuest.SystemF,
                        LambdaQuest.SystemF.Type,
                        LambdaQuest.SystemF.PrettyPrint,
-                       LambdaQuest.SystemF.Parse
+                       LambdaQuest.SystemF.Parse,
+                       LambdaQuest.SystemF.TypeCheck
   ghc-options:         -Wincomplete-patterns
   build-depends:       parsec
