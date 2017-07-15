@@ -21,5 +21,6 @@ executable LambdaQuest
 
 library
   hs-source-dirs:      src
-  exposed-modules:     LambdaQuest.SystemF.Type
+  exposed-modules:     LambdaQuest.SystemF.Type,
+                       LambdaQuest.SystemF.PrettyPrint
   ghc-options:         -Wincomplete-patterns
