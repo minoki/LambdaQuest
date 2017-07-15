@@ -60,10 +60,10 @@ typeExpr tyctx = forallExpr <|> arrTypeExpr tyctx
                         return (TyAll name t)
 
 simpleTerm :: [String] -> [String] -> Parser Term
-simpleTerm tyctx ctx = (reserved "True" >> return (TValue $ VBool True))
-                       <|> (reserved "False" >> return (TValue $ VBool False))
-                       <|> (try ((TValue . VReal) <$> float) <?> "floating point literal")
-                       <|> (((TValue . VInt) <$> natural) <?> "integer literal")
+simpleTerm tyctx ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
+                       <|> (reserved "False" >> return (TPrimValue $ PVBool False))
+                       <|> (try ((TPrimValue . PVReal) <$> float) <?> "floating point literal")
+                       <|> (((TPrimValue . PVInt) <$> natural) <?> "integer literal")
                        <|> parens (term tyctx ctx)
                        <|> (do name <- identifier <?> "variable"
                                case name `elemIndex` ctx of

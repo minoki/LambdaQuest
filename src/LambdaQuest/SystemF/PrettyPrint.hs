@@ -36,9 +36,9 @@ prettyPrintType t = prettyPrintTypeP 0 [] t ""
 -- <0>: \x:t. <0> | ?a. <0> | if <0> then <0> else <0>
 prettyPrintTermP :: Int -> [String] -> [String] -> Term -> ShowS
 prettyPrintTermP p tyctx ctx t = case t of
-  TValue (VPrim (PVInt x)) -> shows x
-  TValue (VPrim (PVReal x)) -> shows x
-  TValue (VPrim (PVBool x)) -> shows x
+  TPrimValue (PVInt x) -> shows x
+  TPrimValue (PVReal x) -> shows x
+  TPrimValue (PVBool x) -> shows x
   TAbs name ty body -> let name' = rename ctx name
                        in showParen (p > 0) $ showChar '\\' . showString name' . showChar ':' . prettyPrintTypeP 1 tyctx ty . showString ". " . prettyPrintTermP 0 tyctx (name' : ctx) body
   TTyAbs name body -> let name' = rename ctx name

@@ -21,34 +21,35 @@ data PrimValue = PVInt !Integer
                | PVBool !Bool
                deriving (Eq,Show)
 
-data Value = VPrim !PrimValue      -- primitive value
-           | VAbs String Type Term -- lambda abstraction
-           | VTyAbs String Term    -- type abstraction
-           deriving (Show)
-
-pattern VInt x = VPrim (PVInt x)
-pattern VReal x = VPrim (PVReal x)
-pattern VBool x = VPrim (PVBool x)
-
-data Term = TValue !Value
+data Term = TPrimValue !PrimValue -- primitive value
+          | TAbs String Type Term -- lambda abstraction
+          | TTyAbs String Term    -- type abstraction
           | TRef !Int             -- variable (de Brujin index)
           | TApp Term Term        -- function application
           | TTyApp Term Type      -- type application
           | TIf Term Term Term    -- if-then-else
-          deriving (Eq,Show)
+          deriving (Show)
 
-pattern TAbs name ty body = TValue (VAbs name ty body)
-pattern TTyAbs name body = TValue (VTyAbs name body)
+isValue :: Term -> Bool
+isValue t = case t of
+  TPrimValue _ -> True
+  TAbs _ _ _ -> True
+  TTyAbs _ _ -> True
+  _ -> False
 
 instance Eq Type where
   TyPrim p  == TyPrim p'   = p == p'
   TyArr s t == TyArr s' t' = s == s' && t == t'
   TyRef i   == TyRef i'    = i == i'
-  TyAll _ t == TyAll _ t'  = t == t'
+  TyAll _ t == TyAll _ t'  = t == t' -- ignore type variable name
   _         == _           = False
 
-instance Eq Value where
-  VPrim p    == VPrim p'     = p == p'
-  VAbs _ t x == VAbs _ t' x' = t == t' && x == x'
-  VTyAbs _ x == VTyAbs _ x'  = x == x'
-  _          == _            = False
+instance Eq Term where
+  TPrimValue p == TPrimValue p' = p == p'
+  TAbs _ t x   == TAbs _ t' x'  = t == t' && x == x' -- ignore variable name
+  TTyAbs _ x   == TTyAbs _ x'   = x == x'            -- ignore type variable name
+  TRef i       == TRef i'       = i == i'
+  TApp s t     == TApp s' t'    = s == s' && t == t'
+  TTyApp s t   == TTyApp s' t'  = s == s' && t == t'
+  TIf s t u    == TIf s' t' u'  = s == s' && t == t' && u == u'
+  _            == _             = False
