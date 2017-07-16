@@ -18,7 +18,7 @@ ltReal, leReal, equalReal : Real -> Real -> Bool
 - [readline](https://hackage.haskell.org/package/readline) is required to build REPL program.
 ```
 $ stack build
-$ stack exec LambdaQuest
+$ stack exec SystemF-repl
 This is System F REPL.
 Press Ctrl-D to exit.
 > \x: Int. x
