@@ -23,8 +23,8 @@ prettyPrintTypeP p ctx t = case t of
   TyPrim PTyReal -> showString "Real"
   TyPrim PTyBool -> showString "Bool"
   TyArr s t -> showParen (p > 1) $ prettyPrintTypeP 2 ctx s . showString " -> " . prettyPrintTypeP 1 ctx t
-  TyRef i | i < length ctx -> showString (ctx !! i)
-          | otherwise -> showString "<invalid reference #" . shows i . showChar '>'
+  TyRef i _ | i < length ctx -> showString (ctx !! i)
+            | otherwise -> showString "<invalid reference #" . shows i . showChar '>'
   TyAll name t -> let name' = rename ctx name
                   in showParen (p > 0) $ showString "forall " . showString name' . showString ". " . prettyPrintTypeP 0 (name' : ctx) t
 
@@ -61,8 +61,8 @@ prettyPrintTermP p tyctx ctx t = case t of
                        in showParen (p > 0) $ showChar '\\' . showString name' . showChar ':' . prettyPrintTypeP 1 tyctx ty . showString ". " . prettyPrintTermP 0 tyctx (name' : ctx) body
   TTyAbs name body -> let name' = rename ctx name
                       in showParen (p > 0) $ showString "?" . showString name' . showString ". " . prettyPrintTermP 0 (name' : tyctx) ctx body
-  TRef i | i < length ctx -> showString (ctx !! i)
-         | otherwise -> showString "<invalid reference #" . shows i . showChar '>'
+  TRef i _ | i < length ctx -> showString (ctx !! i)
+           | otherwise -> showString "<invalid reference #" . shows i . showChar '>'
   TApp u v -> showParen (p > 1) $ prettyPrintTermP 1 tyctx ctx u . showChar ' ' . prettyPrintTermP 2 tyctx ctx v
   TTyApp u t -> showParen (p > 1) $ prettyPrintTermP 1 tyctx ctx u . showString " [" . prettyPrintTypeP 0 tyctx t . showChar ']'
   TIf cond then_ else_ -> showParen (p > 0) $ showString "if " . prettyPrintTermP 0 tyctx ctx cond . showString " then " . prettyPrintTermP 0 tyctx ctx then_ . showString " else " . prettyPrintTermP 0 tyctx ctx else_

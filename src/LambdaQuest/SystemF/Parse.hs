@@ -59,7 +59,7 @@ simpleTypeExpr tyctx = (reserved "Int" >> return TyInt)
                        <|> parens (typeExpr tyctx)
                        <|> (do name <- identifier <?> "type variable"
                                case name `elemIndex` tyctx of
-                                 Just i -> return (TyRef i)
+                                 Just i -> return (TyRef i name)
                                  Nothing -> fail ("undefined type variable: " ++ name))
                        <?> "simple type expression"
 
@@ -87,7 +87,7 @@ simpleTerm tyctx ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
                        <|> choice [reserved name >> return (TPrimValue v) | (name,v) <- builtinFunctions]
                        <|> (do name <- identifier <?> "variable"
                                case name `elemIndex` ctx of
-                                 Just i -> return (TRef i)
+                                 Just i -> return (TRef i name)
                                  Nothing -> fail ("undefined variable: " ++ name))
                        <?> "simple expression"
 

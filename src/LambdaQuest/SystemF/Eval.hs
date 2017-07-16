@@ -10,14 +10,14 @@ termTypeShift delta i t = case t of
   TApp u v -> TApp (termTypeShift delta i u) (termTypeShift delta i v)
   TTyApp u t -> TTyApp (termTypeShift delta i u) (typeShift delta i t)
   TIf cond thenT elseT -> TIf (termTypeShift delta i cond) (termTypeShift delta i thenT) (termTypeShift delta i elseT)
-  TRef _ -> t
+  TRef _ _ -> t
   TPrimValue _ -> t
 -- termTypeShift 0 i t == 0
 
 termTypeSubstD :: Int -> Type -> Int -> Term -> Term
 termTypeSubstD depth s i t = case t of
   TPrimValue _ -> t
-  TRef _ -> t
+  TRef _ _ -> t
   TAbs name ty body -> TAbs name (typeSubstD depth s i ty) (termTypeSubstD depth s i body)
   TTyAbs name body -> TTyAbs name (termTypeSubstD (depth + 1) s (i + 1) body)
   TApp u v -> TApp (termTypeSubstD depth s i u) (termTypeSubstD depth s i v)
@@ -32,8 +32,8 @@ termShift :: Int -> Int -> Term -> Term
 termShift delta i t = case t of
   TAbs name ty body -> TAbs name ty (termShift delta (i + 1) body)
   TTyAbs name body -> TTyAbs name (termShift delta i body)
-  TRef j | j >= i -> TRef (j + delta)
-         | otherwise -> t
+  TRef j name | j >= i -> TRef (j + delta) name
+              | otherwise -> t
   TApp u v -> TApp (termShift delta i u) (termShift delta i v)
   TTyApp u t -> TTyApp (termShift delta i u) t
   TIf cond then_ else_ -> TIf (termShift delta i cond) (termShift delta i then_) (termShift delta i else_)
@@ -44,9 +44,9 @@ termSubstD :: Int -> Term -> Int -> Term -> Term
 termSubstD depth s i t = case t of
   TAbs name ty body -> TAbs name ty (termSubstD depth s (i + 1) body)
   TTyAbs name body -> TTyAbs name (termSubstD depth s i body)
-  TRef j | j == i -> termShift depth 0 s
-         | j > i -> TRef (j - 1)
-         | otherwise -> t
+  TRef j name | j == i -> termShift depth 0 s
+              | j > i -> TRef (j - 1) name
+              | otherwise -> t
   TApp u v -> TApp (termSubstD depth s i u) (termSubstD depth s i v)
   TTyApp u t -> TTyApp (termSubstD depth s i u) t
   TIf cond then_ else_ -> TIf (termSubstD depth s i cond) (termSubstD depth s i then_) (termSubstD depth s i else_)
@@ -84,8 +84,8 @@ eval1 ctx t = case t of
   TPrimValue _ -> return t
   TAbs _ _ _ -> return t
   TTyAbs _ _ -> return t
-  TRef i | i < length ctx -> return (ctx !! i)
-         | otherwise -> Left "TRef out of range"
+  TRef i _ | i < length ctx -> return (ctx !! i)
+           | otherwise -> Left "TRef out of range"
   TApp u v
     | isValue u && isValue v -> case u of
         TAbs _name _ty body -> return $ termSubst v 0 body -- no type checking here

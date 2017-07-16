@@ -8,7 +8,7 @@ data PrimType = PTyInt
 
 data Type = TyPrim !PrimType
           | TyArr Type Type
-          | TyRef !Int            -- type variable (de Brujin index)
+          | TyRef !Int String     -- type variable (de Brujin index)
           | TyAll String Type     -- type abstraction (forall)
           deriving (Show)
 
@@ -46,7 +46,7 @@ data PrimValue = PVInt !Integer
 data Term = TPrimValue !PrimValue -- primitive value
           | TAbs String Type Term -- lambda abstraction
           | TTyAbs String Term    -- type abstraction
-          | TRef !Int             -- variable (de Brujin index)
+          | TRef !Int String      -- variable (de Brujin index)
           | TApp Term Term        -- function application
           | TTyApp Term Type      -- type application
           | TIf Term Term Term    -- if-then-else
@@ -63,7 +63,7 @@ isValue t = case t of
 instance Eq Type where
   TyPrim p  == TyPrim p'   = p == p'
   TyArr s t == TyArr s' t' = s == s' && t == t'
-  TyRef i   == TyRef i'    = i == i'
+  TyRef i _ == TyRef i' _  = i == i'
   TyAll _ t == TyAll _ t'  = t == t' -- ignore type variable name
   _         == _           = False
 
@@ -71,7 +71,7 @@ instance Eq Term where
   TPrimValue p == TPrimValue p' = p == p'
   TAbs _ t x   == TAbs _ t' x'  = t == t' && x == x' -- ignore variable name
   TTyAbs _ x   == TTyAbs _ x'   = x == x'            -- ignore type variable name
-  TRef i       == TRef i'       = i == i'
+  TRef i _     == TRef i' _     = i == i'
   TApp s t     == TApp s' t'    = s == s' && t == t'
   TTyApp s t   == TTyApp s' t'  = s == s' && t == t'
   TIf s t u    == TIf s' t' u'  = s == s' && t == t' && u == u'

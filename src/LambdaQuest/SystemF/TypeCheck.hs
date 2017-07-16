@@ -6,8 +6,8 @@ typeShift :: Int -> Int -> Type -> Type
 typeShift delta i t = case t of
   TyPrim _ -> t
   TyArr u v -> TyArr (typeShift delta i u) (typeShift delta i v)
-  TyRef j | j >= i -> TyRef (j + delta)
-          | otherwise -> t
+  TyRef j name | j >= i -> TyRef (j + delta) name
+               | otherwise -> t
   TyAll n t -> TyAll n (typeShift delta (i + 1) t)
 -- typeShift 0 i t == t
 
@@ -15,9 +15,9 @@ typeSubstD :: Int -> Type -> Int -> Type -> Type
 typeSubstD depth s i t = case t of
   TyPrim _ -> t
   TyArr u v -> TyArr (typeSubstD depth s i u) (typeSubstD depth s i v)
-  TyRef j | j == i -> typeShift depth 0 s
-          | j > i -> TyRef (j - 1)
-          | otherwise -> t
+  TyRef j name | j == i -> typeShift depth 0 s
+               | j > i -> TyRef (j - 1) name
+               | otherwise -> t
   TyAll n t -> TyAll n (typeSubstD (depth + 1) s (i + 1) t)
 
 -- replaces occurrences of TyRef j (j > i) with TyRef (j-1), and TyRef i with the given type
@@ -60,8 +60,8 @@ typeOf ctx tm = case tm of
     let ctx' = map (typeShift 1 0) ctx
     retType <- typeOf ctx' body
     return (TyAll name retType)
-  TRef i | i < length ctx -> return (ctx !! i)
-         | otherwise -> Left "TRef out of range"
+  TRef i name | i < length ctx -> return (ctx !! i)
+              | otherwise -> Left $ "TRef out of range"
   TApp f x -> do
     fnType <- typeOf ctx f
     actualArgType <- typeOf ctx x
