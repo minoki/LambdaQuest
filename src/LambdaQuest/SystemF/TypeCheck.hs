@@ -57,7 +57,8 @@ typeOf ctx tm = case tm of
     retType <- typeOf (argType : ctx) body
     return (TyArr argType retType)
   TTyAbs name body -> do
-    retType <- typeOf ctx body
+    let ctx' = map (typeShift 1 0) ctx
+    retType <- typeOf ctx' body
     return (TyAll name retType)
   TRef i | i < length ctx -> return (ctx !! i)
          | otherwise -> Left "TRef out of range"
