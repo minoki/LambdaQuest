@@ -21,7 +21,14 @@ library
                        LambdaQuest.SystemF.PrettyPrint,
                        LambdaQuest.SystemF.Parse,
                        LambdaQuest.SystemF.TypeCheck,
-                       LambdaQuest.SystemF.Eval
+                       LambdaQuest.SystemF.Eval,
+                       LambdaQuest.SystemFsub,
+                       LambdaQuest.SystemFsub.Type,
+                       LambdaQuest.SystemFsub.Subtype,
+                       LambdaQuest.SystemFsub.PrettyPrint,
+                       LambdaQuest.SystemFsub.Parse,
+                       LambdaQuest.SystemFsub.TypeCheck,
+                       LambdaQuest.SystemFsub.Eval
   build-depends:       base >= 4.7 && < 5, parsec
   ghc-options:         -Wincomplete-patterns
 
@@ -35,6 +42,20 @@ executable SystemF-repl
                        LambdaQuest.SystemF.Parse,
                        LambdaQuest.SystemF.TypeCheck,
                        LambdaQuest.SystemF.Eval
+  build-depends:       base >= 4.7 && < 5, parsec, readline
+  ghc-options:         -Wincomplete-patterns
+
+executable SystemFsub-repl
+  hs-source-dirs:      src
+  main-is:             SystemFsub-repl.hs
+  default-language:    Haskell2010
+  other-modules:       LambdaQuest.SystemFsub,
+                       LambdaQuest.SystemFsub.Type,
+                       LambdaQuest.SystemFsub.Subtype,
+                       LambdaQuest.SystemFsub.PrettyPrint,
+                       LambdaQuest.SystemFsub.Parse,
+                       LambdaQuest.SystemFsub.TypeCheck,
+                       LambdaQuest.SystemFsub.Eval
   build-depends:       base >= 4.7 && < 5, parsec, readline
   ghc-options:         -Wincomplete-patterns
 
