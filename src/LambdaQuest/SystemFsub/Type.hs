@@ -5,20 +5,19 @@ data PrimType = PTyInt
               | PTyReal
               | PTyBool
               | PTyUnit
-              | PTyTop
               deriving (Eq,Show,Enum,Bounded)
 
 data Type = TyPrim !PrimType
           | TyArr Type Type
           | TyRef !Int String       -- type variable (de Brujin index)
           | TyAll String Type Type  -- bounded type abstraction (forall)
+          | TyTop
           deriving (Show)
 
 pattern TyInt = TyPrim PTyInt
 pattern TyReal = TyPrim PTyReal
 pattern TyBool = TyPrim PTyBool
 pattern TyUnit = TyPrim PTyUnit
-pattern TyTop = TyPrim PTyTop
 
 data BuiltinUnaryFn = BNegateInt
                     | BNegateReal
@@ -71,6 +70,7 @@ instance Eq Type where
   TyArr s t   == TyArr s' t'   = s == s' && t == t'
   TyRef i _   == TyRef i' _    = i == i'
   TyAll _ b t == TyAll _ b' t' = b == b' && t == t' -- ignore type variable name
+  TyTop       == TyTop         = True
   _           == _             = False
 
 instance Eq Term where
@@ -88,6 +88,7 @@ instance Eq Term where
 typeShift :: Int -> Int -> Type -> Type
 typeShift delta i t = case t of
   TyPrim _ -> t
+  TyTop -> t
   TyArr u v -> TyArr (typeShift delta i u) (typeShift delta i v)
   TyRef j name | j >= i -> TyRef (j + delta) name
                | otherwise -> t
@@ -98,6 +99,7 @@ typeShift delta i t = case t of
 typeSubstD :: Int -> Type -> Int -> Type -> Type
 typeSubstD depth s i t = case t of
   TyPrim _ -> t
+  TyTop -> t
   TyArr u v -> TyArr (typeSubstD depth s i u) (typeSubstD depth s i v)
   TyRef j name | j == i -> typeShift depth 0 s
                | j > i -> TyRef (j - 1) name

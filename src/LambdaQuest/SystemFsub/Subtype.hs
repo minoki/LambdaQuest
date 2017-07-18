@@ -4,7 +4,6 @@ import LambdaQuest.SystemFsub.Type
 
 primSubType :: PrimType -> PrimType -> Bool
 primSubType s t | s == t = True
-primSubType s PTyTop = True
 primSubType PTyInt PTyReal = True
 primSubType _ _ = False
 
@@ -39,8 +38,6 @@ exposeType = exposeTypeD 0
 
 primMeetType :: PrimType -> PrimType -> Maybe PrimType
 primMeetType s t | s == t = Just s
-primMeetType s PTyTop = Just s
-primMeetType PTyTop t = Just t
 primMeetType s@PTyInt PTyReal = Just s
 primMeetType PTyReal t@PTyInt = Just t
 primMeetType _ _ = Nothing
@@ -55,19 +52,17 @@ meetType ctx (TyArr s0 s1) (TyArr t0 t1) = TyArr (joinType ctx s0 t0) <$> meetTy
 meetType ctx (TyAll n b s) (TyAll _ b' t) | b == b' = TyAll n b <$> meetType (b : ctx) s t
 meetType _ _ _ = Nothing
 
-primJoinType :: PrimType -> PrimType -> PrimType
-primJoinType s t | s == t = s
-primJoinType _ t@PTyTop = t
-primJoinType s@PTyTop _ = s
-primJoinType PTyInt t@PTyReal = t
-primJoinType s@PTyReal PTyInt = s
-primJoinType _ _ = PTyTop
+primJoinType :: PrimType -> PrimType -> Type
+primJoinType s t | s == t = TyPrim s
+primJoinType PTyInt t@PTyReal = TyPrim t
+primJoinType s@PTyReal PTyInt = TyPrim s
+primJoinType _ _ = TyTop
 
 -- (joinType ctx s t) is a type that is minimal among such u that both (s <: u) and (t <: u) are satisfied.
 joinType :: [Type] -> Type -> Type -> Type
 joinType ctx s t | subType ctx s t = t
                  | subType ctx t s = s
-joinType ctx (TyPrim s) (TyPrim t) = TyPrim (primJoinType s t)
+joinType ctx (TyPrim s) (TyPrim t) = primJoinType s t
 joinType ctx (TyArr s0 s1) (TyArr t0 t1)
   = case meetType ctx s0 t0 of
       Just u -> TyArr u $ joinType ctx s1 t1
