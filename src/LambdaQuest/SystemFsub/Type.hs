@@ -1,11 +1,14 @@
 {-# LANGUAGE PatternSynonyms #-}
-module LambdaQuest.SystemFsub.Type where
-
-data PrimType = PTyInt
-              | PTyReal
-              | PTyBool
-              | PTyUnit
-              deriving (Eq,Show,Enum,Bounded)
+module LambdaQuest.SystemFsub.Type
+  (Type(..,TyInt,TyReal,TyBool,TyUnit)
+  ,Term(..)
+  ,isValue
+  ,typeShift
+  ,typeSubstD
+  ,typeSubst
+  ,module LambdaQuest.Common.Type
+  ) where
+import LambdaQuest.Common.Type
 
 data Type = TyPrim !PrimType
           | TyArr Type Type
@@ -18,34 +21,6 @@ pattern TyInt = TyPrim PTyInt
 pattern TyReal = TyPrim PTyReal
 pattern TyBool = TyPrim PTyBool
 pattern TyUnit = TyPrim PTyUnit
-
-data BuiltinUnaryFn = BNegateInt
-                    | BNegateReal
-                    | BIntToReal
-                    deriving (Eq,Show,Enum,Bounded)
-
-data BuiltinBinaryFn = BAddInt
-                     | BSubInt
-                     | BMulInt
-                     | BLtInt
-                     | BLeInt
-                     | BEqualInt
-                     | BAddReal
-                     | BSubReal
-                     | BMulReal
-                     | BDivReal
-                     | BLtReal
-                     | BLeReal
-                     | BEqualReal
-                     deriving (Eq,Show,Enum,Bounded)
-
-data PrimValue = PVInt !Integer
-               | PVReal !Double
-               | PVBool !Bool
-               | PVUnit
-               | PVBuiltinUnary !BuiltinUnaryFn
-               | PVBuiltinBinary !BuiltinBinaryFn
-               deriving (Eq,Show)
 
 data Term = TPrimValue !PrimValue   -- primitive value
           | TAbs String Type Term   -- lambda abstraction
