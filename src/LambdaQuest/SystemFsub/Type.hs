@@ -4,6 +4,7 @@ module LambdaQuest.SystemFsub.Type where
 data PrimType = PTyInt
               | PTyReal
               | PTyBool
+              | PTyUnit
               | PTyTop
               deriving (Eq,Show,Enum,Bounded)
 
@@ -16,6 +17,7 @@ data Type = TyPrim !PrimType
 pattern TyInt = TyPrim PTyInt
 pattern TyReal = TyPrim PTyReal
 pattern TyBool = TyPrim PTyBool
+pattern TyUnit = TyPrim PTyUnit
 pattern TyTop = TyPrim PTyTop
 
 data BuiltinUnaryFn = BNegateInt
@@ -41,6 +43,7 @@ data BuiltinBinaryFn = BAddInt
 data PrimValue = PVInt !Integer
                | PVReal !Double
                | PVBool !Bool
+               | PVUnit
                | PVBuiltinUnary !BuiltinUnaryFn
                | PVBuiltinBinary !BuiltinBinaryFn
                deriving (Eq,Show)
