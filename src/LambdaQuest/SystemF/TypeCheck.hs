@@ -51,6 +51,7 @@ typeOf ctx tm = case tm of
     PVInt _ -> return TyInt
     PVReal _ -> return TyReal
     PVBool _ -> return TyBool
+    PVUnit -> return TyUnit
     PVBuiltinUnary f -> return $ builtinUnaryFnType f
     PVBuiltinBinary f -> return $ builtinBinaryFnType f
   TAbs name argType body -> do

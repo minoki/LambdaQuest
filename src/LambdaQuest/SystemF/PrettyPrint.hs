@@ -22,6 +22,7 @@ prettyPrintTypeP p ctx t = case t of
   TyPrim PTyInt -> showString "Int"
   TyPrim PTyReal -> showString "Real"
   TyPrim PTyBool -> showString "Bool"
+  TyPrim PTyUnit -> showString "Unit"
   TyArr s t -> showParen (p > 1) $ prettyPrintTypeP 2 ctx s . showString " -> " . prettyPrintTypeP 1 ctx t
   TyRef i _ | i < length ctx -> showString (ctx !! i)
             | otherwise -> showString "<invalid reference #" . shows i . showChar '>'
@@ -39,6 +40,7 @@ prettyPrintTermP p tyctx ctx t = case t of
   TPrimValue (PVInt x) -> shows x
   TPrimValue (PVReal x) -> shows x
   TPrimValue (PVBool x) -> shows x
+  TPrimValue PVUnit -> showString "unit"
   TPrimValue (PVBuiltinUnary f) -> showString $ case f of
     BNegateInt -> "negateInt"
     BNegateReal -> "negateReal"

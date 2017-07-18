@@ -24,6 +24,7 @@ builtinFunctions = [("negateInt",PVBuiltinUnary BNegateInt)
                    ,("ltReal",PVBuiltinBinary BLtReal)
                    ,("leReal",PVBuiltinBinary BLeReal)
                    ,("equalReal",PVBuiltinBinary BEqualReal)
+                   ,("unit",PVUnit)
                    ]
 
 langDef = PT.LanguageDef { PT.commentStart = ""
@@ -56,6 +57,7 @@ simpleTypeExpr :: [String] -> Parser Type
 simpleTypeExpr tyctx = (reserved "Int" >> return TyInt)
                        <|> (reserved "Real" >> return TyReal)
                        <|> (reserved "Bool" >> return TyBool)
+                       <|> (reserved "Unit" >> return TyUnit)
                        <|> parens (typeExpr tyctx)
                        <|> (do name <- identifier <?> "type variable"
                                case name `elemIndex` tyctx of

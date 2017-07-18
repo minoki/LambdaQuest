@@ -1,8 +1,8 @@
 # LambdaQuest
 
 This is an implementation of System F with
-- primitive types: `Int`, `Real`, `Bool`
-- primivite values: integer literals, floating point literals, `True`, `False`
+- primitive types: `Int`, `Real`, `Bool`, `Unit`
+- primivite values: integer literals, floating point literals, `True`, `False`, `unit`
 - built-in functions:
 ```
 negateInt : Int -> Int
@@ -88,7 +88,7 @@ type       ::= 'forall' <type variable> '.' type -- universal (forall) type
              | arrowType
 arrowType  ::= simpleType '->' arrowType         -- function type
              | simpleType
-simpleType ::= 'Int' | 'Real' | 'Bool'
+simpleType ::= 'Int' | 'Real' | 'Bool' | 'Unit'
              | <type variable>
              | '(' type ')'
 
@@ -101,7 +101,7 @@ appTerm    ::= appTerm simpleTerm       -- function application
              | simpleTerm
 simpleTerm ::= <integer literal>
              | <floating point literal>
-             | 'True' | 'False'
+             | 'True' | 'False' | 'unit'
              | <variable>
              | <built-in function>
              | '(' term ')'
