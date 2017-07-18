@@ -94,8 +94,9 @@ simpleTerm tyctx ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
 -- function application / type application
 appTerm :: [String] -> [String] -> Parser Term
 appTerm tyctx ctx = do x <- simpleTerm tyctx ctx
-                       xs <- many ((Left <$> simpleTerm tyctx ctx) <|> (Right <$> brackets (typeExpr tyctx)))
-                       return (foldl' (\x -> either (TApp x) (TTyApp x)) x xs)
+                       xs <- many ((flip TApp <$> simpleTerm tyctx ctx)
+                                   <|> (flip TTyApp <$> brackets (typeExpr tyctx)))
+                       return (foldl' (flip ($)) x xs)
 
 term :: [String] -> [String] -> Parser Term
 term tyctx ctx = lambdaAbstraction
