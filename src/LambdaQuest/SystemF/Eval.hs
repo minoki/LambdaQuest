@@ -55,29 +55,36 @@ termSubstD depth s i t = case t of
 -- replaces occurrences of TRef j (j > i) with TRef (j-1), and TRef i with the given term
 termSubst = termSubstD 0
 
-applyBuiltinUnaryFn :: BuiltinUnaryFn -> PrimValue -> Either String Term
-applyBuiltinUnaryFn f v = case (f,v) of
-  (BNegateInt, PVInt x) -> return $ TPrimValue $ PVInt (negate x)
-  (BNegateReal, PVReal x) -> return $ TPrimValue $ PVReal (negate x)
-  (BIntToReal, PVInt x) -> return $ TPrimValue $ PVReal (fromIntegral x)
-  _ -> Left ("type error: built-in function " ++ show f)
+intFromValue :: Term -> Either String Integer
+intFromValue (TPrimValue (PVInt x)) = return x
+intFromValue _ = Left "type error (expected an integer)"
 
-applyBuiltinBinaryFn :: BuiltinBinaryFn -> PrimValue -> PrimValue -> Either String Term
-applyBuiltinBinaryFn f u v = case (f,u,v) of
-  (BAddInt, PVInt x, PVInt y) -> return $ TPrimValue $ PVInt (x + y)
-  (BSubInt, PVInt x, PVInt y) -> return $ TPrimValue $ PVInt (x - y)
-  (BMulInt, PVInt x, PVInt y) -> return $ TPrimValue $ PVInt (x * y)
-  (BLtInt, PVInt x, PVInt y) -> return $ TPrimValue $ PVBool (x < y)
-  (BLeInt, PVInt x, PVInt y) -> return $ TPrimValue $ PVBool (x <= y)
-  (BEqualInt, PVInt x, PVInt y) -> return $ TPrimValue $ PVBool (x == y)
-  (BAddReal, PVReal x, PVReal y) -> return $ TPrimValue $ PVReal (x + y)
-  (BSubReal, PVReal x, PVReal y) -> return $ TPrimValue $ PVReal (x - y)
-  (BMulReal, PVReal x, PVReal y) -> return $ TPrimValue $ PVReal (x * y)
-  (BDivReal, PVReal x, PVReal y) -> return $ TPrimValue $ PVReal (x / y)
-  (BLtReal, PVReal x, PVReal y) -> return $ TPrimValue $ PVBool (x < y)
-  (BLeReal, PVReal x, PVReal y) -> return $ TPrimValue $ PVBool (x <= y)
-  (BEqualReal, PVReal x, PVReal y) -> return $ TPrimValue $ PVBool (x == y)
-  _ -> Left ("type error: built-in function " ++ show f)
+realFromValue :: Term -> Either String Double
+realFromValue (TPrimValue (PVInt x)) = return (fromIntegral x)
+realFromValue (TPrimValue (PVReal x)) = return x
+realFromValue _ = Left "type error (expected a real number)"
+
+applyBuiltinUnaryFn :: BuiltinUnaryFn -> Term -> Either String Term
+applyBuiltinUnaryFn f v = case f of
+  BNegateInt -> (TPrimValue . PVInt . negate) <$> intFromValue v
+  BNegateReal -> (TPrimValue . PVReal . negate) <$> realFromValue v
+  BIntToReal -> (TPrimValue . PVReal . fromIntegral) <$> intFromValue v
+
+applyBuiltinBinaryFn :: BuiltinBinaryFn -> Term -> Term -> Either String Term
+applyBuiltinBinaryFn f u v = case f of
+  BAddInt -> (TPrimValue . PVInt) <$> ((+) <$> intFromValue u <*> intFromValue v)
+  BSubInt -> (TPrimValue . PVInt) <$> ((-) <$> intFromValue u <*> intFromValue v)
+  BMulInt -> (TPrimValue . PVInt) <$> ((*) <$> intFromValue u <*> intFromValue v)
+  BLtInt -> (TPrimValue . PVBool) <$> ((<) <$> intFromValue u <*> intFromValue v)
+  BLeInt -> (TPrimValue . PVBool) <$> ((<=) <$> intFromValue u <*> intFromValue v)
+  BEqualInt -> (TPrimValue . PVBool) <$> ((==) <$> intFromValue u <*> intFromValue v)
+  BAddReal -> (TPrimValue . PVReal) <$> ((+) <$> realFromValue u <*> realFromValue v)
+  BSubReal -> (TPrimValue . PVReal) <$> ((-) <$> realFromValue u <*> realFromValue v)
+  BMulReal -> (TPrimValue . PVReal) <$> ((*) <$> realFromValue u <*> realFromValue v)
+  BDivReal -> (TPrimValue . PVReal) <$> ((/) <$> realFromValue u <*> realFromValue v)
+  BLtReal -> (TPrimValue . PVBool) <$> ((<) <$> realFromValue u <*> realFromValue v)
+  BLeReal -> (TPrimValue . PVBool) <$> ((<=) <$> realFromValue u <*> realFromValue v)
+  BEqualReal -> (TPrimValue . PVBool) <$> ((==) <$> realFromValue u <*> realFromValue v)
 
 eval1 :: [Term] -> Term -> Either String Term
 eval1 ctx t = case t of
@@ -89,13 +96,9 @@ eval1 ctx t = case t of
   TApp u v
     | isValue u && isValue v -> case u of
         TAbs _name _ty body -> return $ termSubst v 0 body -- no type checking here
-        TPrimValue (PVBuiltinUnary f) -> case v of
-          TPrimValue x -> applyBuiltinUnaryFn f x
-          _ -> Left "invalid built-in function application (expected primitive value)"
+        TPrimValue (PVBuiltinUnary f) -> applyBuiltinUnaryFn f v
         TPrimValue (PVBuiltinBinary _) -> return t -- partial application
-        TApp (TPrimValue (PVBuiltinBinary f)) u' -> case (u',v) of
-          (TPrimValue x, TPrimValue y) -> applyBuiltinBinaryFn f x y
-          _ -> Left "invalid built-in function application (expected primitive value)"
+        TApp (TPrimValue (PVBuiltinBinary f)) u' -> applyBuiltinBinaryFn f u' v
         _ -> Left "invalid function application (expected function type)"
     | isValue u -> TApp u <$> (eval1 ctx v)
     | otherwise -> TApp <$> (eval1 ctx u) <*> pure v
