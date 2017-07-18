@@ -1,6 +1,6 @@
 # LambdaQuest
 
-This is an implementation of System F with
+This is an implementation of System F and System Fsub with
 - primitive types: `Int`, `Real`, `Bool`, `Unit`
 - primivite values: integer literals, floating point literals, `True`, `False`, `unit`
 - built-in functions:
@@ -13,9 +13,12 @@ ltInt, leInt, equalInt : Int -> Int -> Bool
 addReal, subReal, mulReal, divReal : Real -> Real -> Real
 ltReal, leReal, equalReal : Real -> Real -> Bool
 ```
+- non-trivial subtyping relation of primitives: `Int <: Real` [Fsub only]
 
 ## Example
 - [readline](https://hackage.haskell.org/package/readline) is required to build REPL program.
+
+Play with System F:
 ```
 $ stack build
 $ stack exec SystemF-repl
@@ -37,6 +40,36 @@ Evaluation:
 (?a. \x:a. x) [Int] 123
 --> (\x:Int. x) 123
 --> 123.
+> ^D
+Bye!
+```
+
+Play with System Fsub:
+```
+$ stack exec SystemFsub-repl
+This is System F REPL.
+Press Ctrl-D to exit.
+> (\x: Int. addReal x 1.0) 3
+Type is Real.
+Evaluation:
+(\x:Int. addReal x 1.0) 3
+--> addReal 3 1.0
+--> 4.0.
+> (?a<:Real. \x:a. addReal x x) [Int] 5
+Type is Real.
+Evaluation:
+(?a<:Real. \x:a. addReal x x) [Int] 5
+--> (\x:Int. addReal x x) 5
+--> addReal 5 5
+--> 10.0.
+> (\f:Int -> Real. f 4) negateInt
+Type is Real.
+Evaluation:
+(\f:Int -> Real. f 4) negateInt
+--> negateInt 4
+--> -4.
+> ^D
+Bye!
 ```
 
 Church numerals:
@@ -84,20 +117,24 @@ cnat2int (cplus c1 c1)
 
 ## Syntax
 ```
-type       ::= 'forall' <type variable> '.' type -- universal (forall) type
+type       ::= 'forall' <type variable> '.' type                 -- universal quantified (forall) type
+             | 'forall' <type variable> '<:' arrowType '.' type  -- bounded universal quantified type [Fsub only]
              | arrowType
-arrowType  ::= simpleType '->' arrowType         -- function type
+arrowType  ::= simpleType '->' arrowType                         -- function type
              | simpleType
 simpleType ::= 'Int' | 'Real' | 'Bool' | 'Unit'
+             | 'Top'                                             -- the universal supertype [Fsub only]
              | <type variable>
              | '(' type ')'
 
-term       ::= '\' <variable> ':' arrowType '.' term -- lambda abstraction (function)
-             | '?' <type variable> '.' term          -- type abstraction
-             | 'if' term 'then' term 'else' term     -- conditional
+term       ::= '\' <variable> ':' arrowType '.' term        -- lambda abstraction (function)
+             | '?' <type variable> '.' term                 -- type abstraction
+             | '?' <type variable> '<:' arrowType '.' term  -- bounded type abstraction [Fsub only]
+             | 'if' term 'then' term 'else' term            -- conditional
              | appTerm
 appTerm    ::= appTerm simpleTerm       -- function application
              | appTerm '[' type ']'     -- type application
+             | appTerm 'as' arrowType   -- type coercion [Fsub only]
              | simpleTerm
 simpleTerm ::= <integer literal>
              | <floating point literal>
