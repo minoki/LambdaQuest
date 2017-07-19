@@ -8,7 +8,7 @@ module LambdaQuest.SystemFsub.Type
   ,typeSubst
   ,module LambdaQuest.Common.Type
   ) where
-import LambdaQuest.Common.Type
+import LambdaQuest.Common.Type hiding (genPrimTypeOf)
 
 data Type = TyPrim !PrimType
           | TyArr Type Type

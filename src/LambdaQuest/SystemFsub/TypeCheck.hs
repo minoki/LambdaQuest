@@ -1,38 +1,14 @@
 module LambdaQuest.SystemFsub.TypeCheck where
 import LambdaQuest.SystemFsub.Type
 import LambdaQuest.SystemFsub.Subtype
+import LambdaQuest.Common.Type
 
-builtinUnaryFnType :: BuiltinUnaryFn -> Type
-builtinUnaryFnType t = case t of
-  BNegateInt -> TyArr TyInt TyInt
-  BNegateReal -> TyArr TyReal TyReal
-  BIntToReal -> TyArr TyInt TyReal
-
-builtinBinaryFnType :: BuiltinBinaryFn -> Type
-builtinBinaryFnType t = case t of
-  BAddInt -> TyArr TyInt (TyArr TyInt TyInt)
-  BSubInt -> TyArr TyInt (TyArr TyInt TyInt)
-  BMulInt -> TyArr TyInt (TyArr TyInt TyInt)
-  BLtInt -> TyArr TyInt (TyArr TyInt TyBool)
-  BLeInt -> TyArr TyInt (TyArr TyInt TyBool)
-  BEqualInt -> TyArr TyInt (TyArr TyInt TyBool)
-  BAddReal -> TyArr TyReal (TyArr TyReal TyReal)
-  BSubReal -> TyArr TyReal (TyArr TyReal TyReal)
-  BMulReal -> TyArr TyReal (TyArr TyReal TyReal)
-  BDivReal -> TyArr TyReal (TyArr TyReal TyReal)
-  BLtReal -> TyArr TyReal (TyArr TyReal TyBool)
-  BLeReal -> TyArr TyReal (TyArr TyReal TyBool)
-  BEqualReal -> TyArr TyReal (TyArr TyReal TyBool)
+primTypeOf :: PrimValue -> Type
+primTypeOf = genPrimTypeOf TyPrim TyArr
 
 typeOf :: [Type] -> [Type] -> Term -> Either String Type
 typeOf tyctx ctx tm = case tm of
-  TPrimValue primValue -> case primValue of
-    PVInt _ -> return TyInt
-    PVReal _ -> return TyReal
-    PVBool _ -> return TyBool
-    PVUnit -> return TyUnit
-    PVBuiltinUnary f -> return $ builtinUnaryFnType f
-    PVBuiltinBinary f -> return $ builtinBinaryFnType f
+  TPrimValue primValue -> return (primTypeOf primValue)
   TAbs name argType body -> do
     retType <- typeOf tyctx (argType : ctx) body
     return (TyArr argType retType)
