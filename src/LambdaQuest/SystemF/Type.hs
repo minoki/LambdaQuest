@@ -9,7 +9,7 @@ import LambdaQuest.Common.Type
 
 data Type = TyPrim !PrimType
           | TyArr Type Type
-          | TyRef !Int String     -- type variable (de Brujin index)
+          | TyRef !Int String     -- type variable (de Bruijn index)
           | TyAll String Type     -- type abstraction (forall)
           deriving (Show)
 
@@ -21,7 +21,7 @@ pattern TyUnit = TyPrim PTyUnit
 data Term = TPrimValue !PrimValue -- primitive value
           | TAbs String Type Term -- lambda abstraction
           | TTyAbs String Term    -- type abstraction
-          | TRef !Int String      -- variable (de Brujin index)
+          | TRef !Int String      -- variable (de Bruijn index)
           | TApp Term Term        -- function application
           | TTyApp Term Type      -- type application
           | TIf Term Term Term    -- if-then-else
