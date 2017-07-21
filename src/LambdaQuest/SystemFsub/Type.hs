@@ -2,7 +2,10 @@
 module LambdaQuest.SystemFsub.Type
   (Type(..,TyInt,TyReal,TyBool,TyUnit)
   ,Term(..)
+  ,Binding(..)
   ,isValue
+  ,getTypeFromContext
+  ,getBoundFromContext
   ,typeShift
   ,typeSubstD
   ,typeSubst
@@ -31,6 +34,11 @@ data Term = TPrimValue !PrimValue   -- primitive value
           | TIf Term Term Term      -- if-then-else
           | TCoerce Term Type       -- type coercion
           deriving (Show)
+
+data Binding = VarBind String Type   -- variable binding (name, type)
+             | TyVarBind String Type -- type variable binding (name, upper bound)
+             | AnonymousBind         -- placeholder for function type
+             deriving (Eq,Show)
 
 isValue :: Term -> Bool
 isValue t = case t of
@@ -64,8 +72,9 @@ typeShift :: Int -> Int -> Type -> Type
 typeShift delta i t = case t of
   TyPrim _ -> t
   TyTop -> t
-  TyArr u v -> TyArr (typeShift delta i u) (typeShift delta i v)
-  TyRef j name | j >= i -> TyRef (j + delta) name
+  TyArr u v -> TyArr (typeShift delta i u) (typeShift delta (i + 1) v)
+  TyRef j name | j >= i, j + delta >= 0 -> TyRef (j + delta) name
+               | j >= i, j + delta < 0 -> error "typeShift: negative index"
                | otherwise -> t
   TyAll n b t -> TyAll n (typeShift delta i b) (typeShift delta (i + 1) t)
 -- typeShift 0 i t == t
@@ -75,7 +84,7 @@ typeSubstD :: Int -> Type -> Int -> Type -> Type
 typeSubstD depth s i t = case t of
   TyPrim _ -> t
   TyTop -> t
-  TyArr u v -> TyArr (typeSubstD depth s i u) (typeSubstD depth s i v)
+  TyArr u v -> TyArr (typeSubstD depth s i u) (typeSubstD (depth + 1) s (i + 1) v)
   TyRef j name | j == i -> typeShift depth 0 s
                | j > i -> TyRef (j - 1) name
                | otherwise -> t
@@ -83,4 +92,18 @@ typeSubstD depth s i t = case t of
 
 -- replaces occurrences of TyRef j (j > i) with TyRef (j-1), and TyRef i with the given type
 typeSubst = typeSubstD 0
+
+getTypeFromContext :: [Binding] -> Int -> Type
+getTypeFromContext ctx i
+  | i < length ctx = case ctx !! i of
+                       VarBind _ t -> t
+                       b -> error ("TRef: expected a variable binding, found " ++ show b)
+  | otherwise = error "TRef: index out of bounds"
+
+getBoundFromContext :: [Binding] -> Int -> Type
+getBoundFromContext ctx i
+  | i < length ctx = case ctx !! i of
+                       TyVarBind _ b -> b
+                       b -> error ("TyRef: expected a type variable binding, found " ++ show b)
+  | otherwise = error "TyRef: index out of bounds"
 
