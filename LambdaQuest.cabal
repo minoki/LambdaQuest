@@ -68,6 +68,10 @@ test-suite SystemF-test
   main-is:             Spec.hs
   other-modules:       ParseSpec,
                        ChurchNumeralSpec,
-                       ChurchListSpec
+                       ChurchListSpec,
+                       SystemFsub.ParseSpec,
+                       SystemFsub.ChurchNumeralSpec,
+                       SystemFsub.ChurchListSpec,
+                       SystemFsub.BoundedPolySpec
   build-depends:       base, LambdaQuest, hspec, QuickCheck
   default-language:    Haskell2010
