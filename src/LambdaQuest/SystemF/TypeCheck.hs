@@ -6,8 +6,9 @@ import LambdaQuest.Common.Type
 typeShift :: Int -> Int -> Type -> Type
 typeShift delta i t = case t of
   TyPrim _ -> t
-  TyArr u v -> TyArr (typeShift delta i u) (typeShift delta i v)
-  TyRef j name | j >= i -> TyRef (j + delta) name
+  TyArr u v -> TyArr (typeShift delta i u) (typeShift delta (i + 1) v)
+  TyRef j name | j >= i, j + delta >= 0 -> TyRef (j + delta) name
+               | j >= i, j + delta < 0 -> error "typeShift: negative index"
                | otherwise -> t
   TyAll n t -> TyAll n (typeShift delta (i + 1) t)
 -- typeShift 0 i t == t
@@ -15,7 +16,7 @@ typeShift delta i t = case t of
 typeSubstD :: Int -> Type -> Int -> Type -> Type
 typeSubstD depth s i t = case t of
   TyPrim _ -> t
-  TyArr u v -> TyArr (typeSubstD depth s i u) (typeSubstD depth s i v)
+  TyArr u v -> TyArr (typeSubstD depth s i u) (typeSubstD (depth + 1) s (i + 1) v)
   TyRef j name | j == i -> typeShift depth 0 s
                | j > i -> TyRef (j - 1) name
                | otherwise -> t
@@ -27,23 +28,21 @@ typeSubst = typeSubstD 0
 primTypeOf :: PrimValue -> Type
 primTypeOf = genPrimTypeOf TyPrim TyArr
 
-typeOf :: [Type] -> Term -> Either String Type
+typeOf :: [Binding] -> Term -> Either String Type
 typeOf ctx tm = case tm of
   TPrimValue primValue -> return (primTypeOf primValue)
   TAbs name argType body -> do
-    retType <- typeOf (argType : ctx) body
+    retType <- typeOf (VarBind name argType : ctx) body
     return (TyArr argType retType)
   TTyAbs name body -> do
-    let ctx' = map (typeShift 1 0) ctx
-    retType <- typeOf ctx' body
+    retType <- typeOf (TyVarBind name : ctx) body
     return (TyAll name retType)
-  TRef i name | i < length ctx -> return (ctx !! i)
-              | otherwise -> Left $ "TRef out of range"
+  TRef i name -> return $ typeShift (i + 1) 0 $ getTypeFromContext ctx i
   TApp f x -> do
     fnType <- typeOf ctx f
     actualArgType <- typeOf ctx x
     case fnType of
-      TyArr expectedArgType retType | actualArgType == expectedArgType -> return retType
+      TyArr expectedArgType retType | actualArgType == expectedArgType -> return $ typeShift (-1) 0 retType
                                     | otherwise -> Left ("type error (expected: " ++ show expectedArgType ++ ", got: " ++ show actualArgType ++ ")")
       _ -> Left ("invalid function application (expected function type, got: " ++ show fnType ++ ")")
   TTyApp f t -> do

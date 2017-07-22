@@ -7,6 +7,11 @@ import Data.Foldable (foldl')
 
 type Parser = Parsec String ()
 
+data NameBinding = NVarBind String
+                 | NAnonymousBind
+                 | NTyVarBind String
+                 deriving (Eq,Show)
+
 builtinFunctions :: [(String,PrimValue)]
 builtinFunctions = [("negateInt",PVBuiltinUnary BNegateInt)
                    ,("negateReal",PVBuiltinUnary BNegateReal)
@@ -53,77 +58,77 @@ braces = PT.braces tokenParser
 brackets = PT.brackets tokenParser
 whiteSpace = PT.whiteSpace tokenParser
 
-simpleTypeExpr :: [String] -> Parser Type
-simpleTypeExpr tyctx = (reserved "Int" >> return TyInt)
-                       <|> (reserved "Real" >> return TyReal)
-                       <|> (reserved "Bool" >> return TyBool)
-                       <|> (reserved "Unit" >> return TyUnit)
-                       <|> parens (typeExpr tyctx)
-                       <|> (do name <- identifier <?> "type variable"
-                               case name `elemIndex` tyctx of
-                                 Just i -> return (TyRef i name)
-                                 Nothing -> fail ("undefined type variable: " ++ name))
-                       <?> "simple type expression"
+simpleTypeExpr :: [NameBinding] -> Parser Type
+simpleTypeExpr ctx = (reserved "Int" >> return TyInt)
+                     <|> (reserved "Real" >> return TyReal)
+                     <|> (reserved "Bool" >> return TyBool)
+                     <|> (reserved "Unit" >> return TyUnit)
+                     <|> parens (typeExpr ctx)
+                     <|> (do name <- identifier <?> "type variable"
+                             case NTyVarBind name `elemIndex` ctx of
+                               Just i -> return (TyRef i name)
+                               Nothing -> fail ("undefined type variable: " ++ name))
+                     <?> "simple type expression"
 
-arrTypeExpr :: [String] -> Parser Type
-arrTypeExpr tyctx = do a <- simpleTypeExpr tyctx
-                       (reservedOp "->" >> (TyArr a <$> arrTypeExpr tyctx))
-                         <|> return a
-                    <?> "type expression"
+arrTypeExpr :: [NameBinding] -> Parser Type
+arrTypeExpr ctx = do a <- simpleTypeExpr ctx
+                     (reservedOp "->" >> (TyArr a <$> arrTypeExpr (NAnonymousBind : ctx)))
+                       <|> return a
+                  <?> "type expression"
 
-typeExpr :: [String] -> Parser Type
-typeExpr tyctx = forallExpr <|> arrTypeExpr tyctx
-                 <?> "type expression"
+typeExpr :: [NameBinding] -> Parser Type
+typeExpr ctx = forallExpr <|> arrTypeExpr ctx
+               <?> "type expression"
   where forallExpr = do reserved "forall"
                         name <- identifier <?> "type variable"
                         reservedOp "."
-                        t <- typeExpr (name : tyctx)
+                        t <- typeExpr (NTyVarBind name : ctx)
                         return (TyAll name t)
 
-simpleTerm :: [String] -> [String] -> Parser Term
-simpleTerm tyctx ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
-                       <|> (reserved "False" >> return (TPrimValue $ PVBool False))
-                       <|> (try ((TPrimValue . PVReal) <$> float) <?> "floating point literal")
-                       <|> (((TPrimValue . PVInt) <$> natural) <?> "integer literal")
-                       <|> parens (term tyctx ctx)
-                       <|> choice [reserved name >> return (TPrimValue v) | (name,v) <- builtinFunctions]
-                       <|> (do name <- identifier <?> "variable"
-                               case name `elemIndex` ctx of
-                                 Just i -> return (TRef i name)
-                                 Nothing -> fail ("undefined variable: " ++ name))
-                       <?> "simple expression"
+simpleTerm :: [NameBinding] -> Parser Term
+simpleTerm ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
+                 <|> (reserved "False" >> return (TPrimValue $ PVBool False))
+                 <|> (try ((TPrimValue . PVReal) <$> float) <?> "floating point literal")
+                 <|> (((TPrimValue . PVInt) <$> natural) <?> "integer literal")
+                 <|> parens (term ctx)
+                 <|> choice [reserved name >> return (TPrimValue v) | (name,v) <- builtinFunctions]
+                 <|> (do name <- identifier <?> "variable"
+                         case NVarBind name `elemIndex` ctx of
+                           Just i -> return (TRef i name)
+                           Nothing -> fail ("undefined variable: " ++ name))
+                 <?> "simple expression"
 
 -- function application / type application
-appTerm :: [String] -> [String] -> Parser Term
-appTerm tyctx ctx = do x <- simpleTerm tyctx ctx
-                       xs <- many ((flip TApp <$> simpleTerm tyctx ctx)
-                                   <|> (flip TTyApp <$> brackets (typeExpr tyctx)))
-                       return (foldl' (flip ($)) x xs)
+appTerm :: [NameBinding] -> Parser Term
+appTerm ctx = do x <- simpleTerm ctx
+                 xs <- many ((flip TApp <$> simpleTerm ctx)
+                              <|> (flip TTyApp <$> brackets (typeExpr ctx)))
+                 return (foldl' (flip ($)) x xs)
 
-term :: [String] -> [String] -> Parser Term
-term tyctx ctx = lambdaAbstraction
-                 <|> typeAbstraction
-                 <|> ifThenElse
-                 <|> appTerm tyctx ctx
-                 <?> "expression"
+term :: [NameBinding] -> Parser Term
+term ctx = lambdaAbstraction
+           <|> typeAbstraction
+           <|> ifThenElse
+           <|> appTerm ctx
+           <?> "expression"
   where lambdaAbstraction = do reservedOp "\\"
                                name <- identifier
                                reservedOp ":"
-                               varType <- typeExpr tyctx
+                               varType <- typeExpr ctx
                                reservedOp "."
-                               body <- term tyctx (name : ctx)
+                               body <- term (NVarBind name : ctx)
                                return (TAbs name varType body)
         typeAbstraction = do reservedOp "?"
                              name <- identifier
                              reservedOp "."
-                             body <- term (name : tyctx) ctx
+                             body <- term (NTyVarBind name : ctx)
                              return (TTyAbs name body)
         ifThenElse = do reserved "if"
-                        cond <- term tyctx ctx
+                        cond <- term ctx
                         reserved "then"
-                        thenExpr <- term tyctx ctx
+                        thenExpr <- term ctx
                         reserved "else"
-                        elseExpr <- term tyctx ctx
+                        elseExpr <- term ctx
                         return (TIf cond thenExpr elseExpr)
 
 parseType :: SourceName -> String -> Either ParseError Type
@@ -138,6 +143,6 @@ parseTerm :: SourceName -> String -> Either ParseError Term
 parseTerm name input = parse wholeParser name input
   where wholeParser = do
           whiteSpace
-          t <- term [] []
+          t <- term []
           eof
           return t

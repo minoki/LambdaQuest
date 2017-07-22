@@ -16,9 +16,9 @@ spec = do
 
   describe "SystemF.Parse with Church numerals" $ do
     it "can parse Nat type" $ do
-      eNatType `shouldBe` Right (TyAll "a" $ TyArr (TyArr (TyRef 0 "a") (TyRef 0 "a")) (TyArr (TyRef 0 "a") (TyRef 0 "a")))
+      eNatType `shouldBe` Right (TyAll "a" $ TyArr (TyArr (TyRef 0 "a") (TyRef 1 "a")) (TyArr (TyRef 1 "a") (TyRef 2 "a")))
     it "can parse c0" $ do
-      ec0 `shouldBe` Right (TTyAbs "a" $ TAbs "s" (TyArr (TyRef 0 "a") (TyRef 0 "a")) $ TAbs "z" (TyRef 0 "a") $ TRef 0 "z")
+      ec0 `shouldBe` Right (TTyAbs "a" $ TAbs "s" (TyArr (TyRef 0 "a") (TyRef 1 "a")) $ TAbs "z" (TyRef 1 "a") $ TRef 0 "z")
     it "can parse c1" $ ec1 `shouldSatisfy` isRight
     it "can parse c2" $ ec2 `shouldSatisfy` isRight
     it "can parse csucc" $ ecsucc `shouldSatisfy` isRight

@@ -3,6 +3,8 @@ module LambdaQuest.SystemF.Type
   (Type(..,TyInt,TyReal,TyBool,TyUnit)
   ,Term(..)
   ,isValue
+  ,Binding(..)
+  ,getTypeFromContext
   ,module LambdaQuest.Common.Type
   ) where
 import LambdaQuest.Common.Type hiding (genPrimTypeOf)
@@ -26,6 +28,11 @@ data Term = TPrimValue !PrimValue -- primitive value
           | TTyApp Term Type      -- type application
           | TIf Term Term Term    -- if-then-else
           deriving (Show)
+
+data Binding = VarBind String Type -- variable binding (name, type)
+             | TyVarBind String    -- type variable binding (name)
+             | AnonymousBind       -- placeholder for function type
+             deriving (Eq,Show)
 
 isValue :: Term -> Bool
 isValue t = case t of
@@ -51,3 +58,10 @@ instance Eq Term where
   TTyApp s t   == TTyApp s' t'  = s == s' && t == t'
   TIf s t u    == TIf s' t' u'  = s == s' && t == t' && u == u'
   _            == _             = False
+
+getTypeFromContext :: [Binding] -> Int -> Type
+getTypeFromContext ctx i
+  | i < length ctx = case ctx !! i of
+                       VarBind _ t -> t
+                       b -> error ("TRef: expected a variable binding, found " ++ show b)
+  | otherwise = error "TRef: index out of bounds"

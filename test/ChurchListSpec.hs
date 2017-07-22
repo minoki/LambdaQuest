@@ -6,7 +6,7 @@ import LambdaQuest.SystemF
 spec :: Spec
 spec = do
   -- cList t = forall a. (t -> a -> a) -> a -> a
-  let cList t = TyAll "a" $ TyArr (TyArr t (TyArr (TyRef 0 "a") (TyRef 0 "a"))) (TyArr (TyRef 0 "a") (TyRef 0 "a"))
+  let cList t = TyAll "a" $ TyArr (TyArr t (TyArr (TyRef 1 "a") (TyRef 2 "a"))) (TyArr (TyRef 1 "a") (TyRef 2 "a"))
   let econs = parseTerm "" "?t. \\hd:t. \\tl:(forall a. (t -> a -> a) -> a -> a). ?a. \\c:t->a->a. \\n:a. c hd (tl [a] c n)"
   let enil = parseTerm "" "?t. ?a. \\c:t->a->a. \\n:a. n"
   let eisnil = parseTerm "" "?t. \\l:(forall a. (t -> a -> a) -> a -> a). l [Bool] (\\x:t. \\y:Bool.False) True"
@@ -31,7 +31,7 @@ spec = do
         return $ do
           describe "SystemF.TypeCheck with Church lists" $ do
             it "can type check cons" $ do
-              typeOf [] cons `shouldBe` Right (TyAll "t" $ TyArr (TyRef 0 "t") $ TyArr (cList (TyRef 1 "t")) (cList (TyRef 1 "t")))
+              typeOf [] cons `shouldBe` Right (TyAll "t" $ TyArr (TyRef 0 "t") $ TyArr (cList (TyRef 2 "t")) (cList (TyRef 3 "t")))
             it "can type check nil" $ do
               typeOf [] nil `shouldBe` Right (TyAll "t" $ cList (TyRef 1 "t"))
             it "can type check isnil" $ do
