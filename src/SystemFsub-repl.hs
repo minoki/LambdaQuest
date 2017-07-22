@@ -48,11 +48,18 @@ toNameBinding (TypeDef name _) = NTyVarBind name
 
 toBinding :: REPLBinding -> Binding
 toBinding (Let name _ ty) = VarBind name ty
-toBinding (TypeDef name ty) = let bound = ty in TyVarBind name bound
+toBinding (TypeDef name ty) = TyVarBind name TyTop
 
 toValueBinding :: REPLBinding -> ValueBinding
 toValueBinding (Let _ v _) = ValueBind v
 toValueBinding (TypeDef _ _) = TypeBind
+
+resolveTypeAliasInTerm :: Type -> Int -> Term -> Term
+resolveTypeAliasInTerm ty i = termTypeShift 1 i . termTypeSubst ty i
+resolveTypeAliasesInTerm :: [REPLBinding] -> Int -> Term -> Term
+resolveTypeAliasesInTerm [] _ = id
+resolveTypeAliasesInTerm (Let name m ty : xs) i = resolveTypeAliasesInTerm xs (i + 1)
+resolveTypeAliasesInTerm (TypeDef name ty : xs) i = resolveTypeAliasesInTerm xs (i + 1) . resolveTypeAliasInTerm ty i
 
 repl :: [REPLBinding] -> IO ()
 repl ctx = do
@@ -65,37 +72,33 @@ repl ctx = do
         Left error -> do
           print error -- parse error
           repl ctx
-        Right (ReplEval tm) -> case typeOf' (map toBinding ctx) tm of
-          Left error -> do
-            putStrLn $ "Type error: " ++ error
-            repl ctx
-          Right ty -> do
-            putStrLn $ "Type is " ++ prettyPrintType ty ++ "."
-            putStrLn "Evaluation:"
-            putStrLn (prettyPrintTerm tm)
-            evalLoop tm
-            repl ctx
-        Right (ReplTermDef name tm) -> case typeOf' (map toBinding ctx) tm of
-          Left error -> do
-            putStrLn $ "Type error: " ++ error
-            repl ctx
-          Right ty -> do
-            putStrLn $ name ++ " : " ++ prettyPrintType ty ++ "."
-            putStrLn "Evaluation:"
-            putStrLn (prettyPrintTerm tm)
-            result <- evalLoop tm
-            let bMap :: REPLBinding -> REPLBinding
-                bMap (Let name m t) = Let name (termShift 1 0 m) t
-                bMap x = x
-            case result of
-              Just value -> repl (Let name value ty : map bMap ctx)
-              Nothing -> repl ctx
+        Right (ReplEval tm) -> let tm' = resolveTypeAliasesInTerm ctx 0 tm
+          in case typeOf (map toBinding ctx) tm' of
+               Left error -> do
+                 putStrLn $ "Type error: " ++ error
+                 repl ctx
+               Right ty -> do
+                 putStrLn $ "Type is " ++ prettyPrintType ty ++ "."
+                 putStrLn "Evaluation:"
+                 putStrLn (prettyPrintTerm tm')
+                 evalLoop tm'
+                 repl ctx
+        Right (ReplTermDef name tm) -> let tm' = resolveTypeAliasesInTerm ctx 0 tm
+          in case typeOf (map toBinding ctx) tm' of
+               Left error -> do
+                 putStrLn $ "Type error: " ++ error
+                 repl ctx
+               Right ty -> do
+                 putStrLn $ name ++ " : " ++ prettyPrintType ty ++ "."
+                 putStrLn "Evaluation:"
+                 putStrLn (prettyPrintTerm tm')
+                 result <- evalLoop tm'
+                 case result of
+                   Just value -> repl (Let name value ty : ctx)
+                   Nothing -> repl ctx
         Right (ReplTypeDef name ty) -> do
             putStrLn $ name ++ " := " ++ prettyPrintType ty ++ "."
-            let bMap :: REPLBinding -> REPLBinding
-                bMap (Let name m t) = Let name (termTypeShift 1 0 m) t
-                bMap (TypeDef name t) = TypeDef name (typeShift 1 0 t)
-            repl (TypeDef name ty : map bMap ctx)
+            repl (TypeDef name ty : ctx)
   where
     prettyPrintType t = prettyPrintTypeP 0 (map toNameBinding ctx) t ""
     prettyPrintTerm t = prettyPrintTermP 0 (map toNameBinding ctx) t ""
@@ -109,7 +112,6 @@ repl ctx = do
                | otherwise -> do
                    putStrLn $ "--> " ++ prettyPrintTerm t'
                    evalLoop t'
-    typeOf' ctx tm = typeOf ctx tm -- ctx $ foldr (\et -> termTypeSubst et 0) tm (map snd tyctx)
 
 main :: IO ()
 main = do
