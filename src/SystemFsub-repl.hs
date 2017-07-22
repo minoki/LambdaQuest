@@ -6,7 +6,7 @@ import LambdaQuest.SystemFsub.Parse
 import LambdaQuest.SystemFsub.PrettyPrint
 import LambdaQuest.SystemFsub.Type
 import LambdaQuest.SystemFsub.TypeCheck (typeOf)
-import LambdaQuest.SystemFsub.Eval (termTypeShift,termTypeSubst,termShift,eval1,ValueBinding(..))
+import LambdaQuest.SystemFsub.Eval (termShift,termTypeSubst,eval1,ValueBinding(..))
 import Control.Monad (when)
 import System.IO
 import Text.Parsec
@@ -55,7 +55,7 @@ toValueBinding (Let _ v _) = ValueBind v
 toValueBinding (TypeDef _ _) = TypeBind
 
 resolveTypeAliasInTerm :: Type -> Int -> Term -> Term
-resolveTypeAliasInTerm ty i = termTypeShift 1 i . termTypeSubst ty i
+resolveTypeAliasInTerm ty i = termShift 1 i . termTypeSubst ty i
 resolveTypeAliasesInTerm :: [REPLBinding] -> Int -> Term -> Term
 resolveTypeAliasesInTerm [] _ = id
 resolveTypeAliasesInTerm (Let name m ty : xs) i = resolveTypeAliasesInTerm xs (i + 1)

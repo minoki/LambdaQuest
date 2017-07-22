@@ -2,18 +2,18 @@ module LambdaQuest.SystemF.Eval where
 import LambdaQuest.SystemF.Type
 import LambdaQuest.SystemF.TypeCheck
 
--- replaces occurrences of TyRef j (j >= i) with TyRef (j + delta)
-termTypeShift :: Int -> Int -> Term -> Term
-termTypeShift delta i t = case t of
-  TAbs name ty body -> TAbs name (typeShift delta i ty) (termTypeShift delta (i + 1) body)
-  TTyAbs name body -> TTyAbs name (termTypeShift delta (i + 1) body)
-  TApp u v -> TApp (termTypeShift delta i u) (termTypeShift delta i v)
-  TTyApp u t -> TTyApp (termTypeShift delta i u) (typeShift delta i t)
-  TIf cond thenT elseT -> TIf (termTypeShift delta i cond) (termTypeShift delta i thenT) (termTypeShift delta i elseT)
+-- replaces occurrences of TyRef j, TRef j (j >= i) with TyRef (j + delta), TRef (j + delta)
+termShift :: Int -> Int -> Term -> Term
+termShift delta i t = case t of
+  TAbs name ty body -> TAbs name (typeShift delta i ty) (termShift delta (i + 1) body)
+  TTyAbs name body -> TTyAbs name (termShift delta (i + 1) body)
   TRef j name | j >= i -> TRef (j + delta) name
               | otherwise -> t
+  TApp u v -> TApp (termShift delta i u) (termShift delta i v)
+  TTyApp u t -> TTyApp (termShift delta i u) (typeShift delta i t)
+  TIf cond then_ else_ -> TIf (termShift delta i cond) (termShift delta i then_) (termShift delta i else_)
   TPrimValue _ -> t
--- termTypeShift 0 i t == 0
+-- termShift 0 i t == t
 
 termTypeSubstD :: Int -> Type -> Int -> Term -> Term
 termTypeSubstD depth s i t = case t of
@@ -28,19 +28,6 @@ termTypeSubstD depth s i t = case t of
 
 -- replaces occurrences of TyRef j (j > i) with TyRef (j-1), and TyRef i with the given type
 termTypeSubst = termTypeSubstD 0
-
--- replaces occurrences of TRef j (j >= i) with TRef (j + d)
-termShift :: Int -> Int -> Term -> Term
-termShift delta i t = case t of
-  TAbs name ty body -> TAbs name (typeShift delta i ty) (termShift delta (i + 1) body)
-  TTyAbs name body -> TTyAbs name (termShift delta (i + 1) body)
-  TRef j name | j >= i -> TRef (j + delta) name
-              | otherwise -> t
-  TApp u v -> TApp (termShift delta i u) (termShift delta i v)
-  TTyApp u t -> TTyApp (termShift delta i u) (typeShift delta i t)
-  TIf cond then_ else_ -> TIf (termShift delta i cond) (termShift delta i then_) (termShift delta i else_)
-  TPrimValue _ -> t
--- termShift 0 i t == t
 
 termSubstD :: Int -> Term -> Int -> Term -> Term
 termSubstD depth s i t = case t of
