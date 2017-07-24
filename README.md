@@ -47,7 +47,7 @@ Bye!
 Play with System Fsub:
 ```
 $ stack exec SystemFsub-repl
-This is System F REPL.
+This is System Fsub REPL.
 Press Ctrl-D to exit.
 > (\x: Int. addReal x 1.0) 3
 Type is Real.
@@ -115,6 +115,29 @@ cnat2int (cplus c1 c1)
 --> 2.
 ```
 
+Translation from System Fsub to System F:
+```
+$ stack exec SystemFsub-repl
+This is System Fsub REPL.
+Press Ctrl-D to exit.
+> translate (\f:Int->Real. f 1) negateReal
+[System Fsub] Type is Real.
+Translation to System F: (\f:Int -> Real. f 1) ((\f:Real -> Real. \y:Int. f (intToReal y)) negateReal).
+[System F] Type is Real.
+> translate (?a<:Int->Real. \x:a. x) [Real->Real] negateReal
+[System Fsub] Type is Real -> Real.
+Translation to System F: (?a. \_coercion:a -> Int -> Real. \x:a. x) [Real -> Real] (\f:Real -> Real. \y:Int. f (intToReal y)) negateReal.
+[System F] Type is Real -> Real.
+> translate (?a<:Real. \x:a. addReal x) [Int]
+[System Fsub] Type is Int -> Real -> Real.
+Translation to System F: (?a. \_coercion:a -> Real. \x:a. addReal (_coercion x)) [Int] intToReal.
+[System F] Type is Int -> Real -> Real.
+> translate (?a. \x:a. x)
+[System Fsub] Type is forall a. a -> a.
+Translation to System F: ?a. \_coercion:a -> Unit. \x:a. x.
+[System F] Type is forall a. (a -> Unit) -> a -> a.
+```
+
 ## Syntax
 ```
 type       ::= 'forall' <type variable> '.' type                 -- universal quantified (forall) type
@@ -144,3 +167,15 @@ simpleTerm ::= <integer literal>
              | '(' term ')'
 ```
 
+## Translation from System Fsub to System F
+Type:
+```
+forall a <: b. ty  -->  forall a. (a -> b) -> ty  (even if b is Top)
+Top                -->  Unit
+```
+
+Term:
+```
+?a <: b. x  -->  ?a. \_coercion: a -> b. x
+x [ty]      -->  x [ty] (<coercion from ty to the bound type>)
+```
