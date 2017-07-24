@@ -120,16 +120,21 @@ repl ctx = do
                Right (tr, ty) -> do
                  putStrLn $ "[System Fsub] Type is " ++ prettyPrintType ty ++ "."
                  putStrLn $ "Translation to System F: " ++ F.prettyPrintTermP 0 (map toNameBindingF ctx) tr "" ++ "."
-                 putStrLn $ "[System F] Type should be " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) (C.mapType (map toBinding ctx) ty) "" ++ "."
                  let bf (VarBind n ty : ctx) = F.VarBind n (C.mapType ctx ty) : bf ctx
                      bf (TyVarBind n _ : ctx) = F.TyVarBind n : bf ctx
                      bf (AnonymousBind : ctx) = F.AnonymousBind : bf ctx
                      bf [] = []
+                     expectedType = C.mapType (map toBinding ctx) ty
                  case F.typeOf (bf $ map toBinding ctx) tr of
                    Left error -> do
                      putStrLn $ "[System F] Type error: " ++ error
-                   Right ty' -> do
-                     putStrLn $ "[System F] Type is " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) ty' "" ++ "."
+                     putStrLn $ "[System F] (Type should be " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) expectedType "" ++ ".)"
+                   Right ty' | ty' == expectedType -> do
+                                 putStrLn $ "[System F] Type is " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) ty' "" ++ "."
+                             | otherwise -> do
+                                 putStrLn $ "Type mismatch between the translator and System F's type checker:"
+                                 putStrLn $ "[Translator] " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) expectedType ""
+                                 putStrLn $ "[System F type checker] " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) ty' ""
                  repl ctx
   where
     prettyPrintType t = prettyPrintTypeP 0 (map toNameBinding ctx) t ""
@@ -147,6 +152,6 @@ repl ctx = do
 
 main :: IO ()
 main = do
-  putStrLn "This is System F REPL."
+  putStrLn "This is System Fsub REPL."
   putStrLn "Press Ctrl-D to exit."
   repl []
