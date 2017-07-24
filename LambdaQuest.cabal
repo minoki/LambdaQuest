@@ -29,6 +29,7 @@ library
                        LambdaQuest.SystemFsub.Parse,
                        LambdaQuest.SystemFsub.TypeCheck,
                        LambdaQuest.SystemFsub.Eval,
+                       LambdaQuest.SystemFsub.Coercion,
                        LambdaQuest.Common.Type
   build-depends:       base >= 4.7 && < 5, parsec
   ghc-options:         -Wincomplete-patterns
@@ -58,6 +59,13 @@ executable SystemFsub-repl
                        LambdaQuest.SystemFsub.Parse,
                        LambdaQuest.SystemFsub.TypeCheck,
                        LambdaQuest.SystemFsub.Eval,
+                       LambdaQuest.SystemFsub.Coercion,
+                       LambdaQuest.SystemF,
+                       LambdaQuest.SystemF.Type,
+                       LambdaQuest.SystemF.PrettyPrint,
+                       LambdaQuest.SystemF.Parse,
+                       LambdaQuest.SystemF.TypeCheck,
+                       LambdaQuest.SystemF.Eval,
                        LambdaQuest.Common.Type
   build-depends:       base >= 4.7 && < 5, parsec, readline
   ghc-options:         -Wincomplete-patterns

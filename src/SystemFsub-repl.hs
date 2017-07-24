@@ -7,6 +7,9 @@ import LambdaQuest.SystemFsub.PrettyPrint
 import LambdaQuest.SystemFsub.Type
 import LambdaQuest.SystemFsub.TypeCheck (typeOf)
 import LambdaQuest.SystemFsub.Eval (termShift,termTypeSubst,eval1,ValueBinding(..))
+import qualified LambdaQuest.SystemFsub.Coercion as C
+import qualified LambdaQuest.SystemF as F
+import qualified LambdaQuest.SystemF.Parse as F
 import Control.Monad (when)
 import System.IO
 import Text.Parsec
@@ -15,9 +18,10 @@ import System.Console.Readline (readline,addHistory) -- from `readline' package
 data ReplCommand = ReplEval Term
                  | ReplTermDef String Term
                  | ReplTypeDef String Type
+                 | ReplTranslate Term
 
 replCommand :: [NameBinding] -> Parser ReplCommand
-replCommand ctx = termDef <|> typeDef <|> termEval <?> "REPL Command"
+replCommand ctx = termDef <|> typeDef <|> translate <|> termEval <?> "REPL Command"
   where
     termEval = do
       whiteSpace
@@ -38,6 +42,11 @@ replCommand ctx = termDef <|> typeDef <|> termEval <?> "REPL Command"
       t <- typeExpr ctx
       eof
       return (ReplTypeDef name t)
+    translate = do
+      reserved "translate"
+      t <- term ctx
+      eof
+      return (ReplTranslate t)
 
 data REPLBinding = Let String Term Type
                  | TypeDef String Type
@@ -45,6 +54,10 @@ data REPLBinding = Let String Term Type
 toNameBinding :: REPLBinding -> NameBinding
 toNameBinding (Let name _ _) = NVarBind name
 toNameBinding (TypeDef name _) = NTyVarBind name
+
+toNameBindingF :: REPLBinding -> F.NameBinding
+toNameBindingF (Let name _ _) = F.NVarBind name
+toNameBindingF (TypeDef name _) = F.NTyVarBind name
 
 toBinding :: REPLBinding -> Binding
 toBinding (Let name _ ty) = VarBind name ty
@@ -99,6 +112,25 @@ repl ctx = do
         Right (ReplTypeDef name ty) -> do
             putStrLn $ name ++ " := " ++ prettyPrintType ty ++ "."
             repl (TypeDef name ty : ctx)
+        Right (ReplTranslate tm) -> let tm' = resolveTypeAliasesInTerm ctx 0 tm
+          in case C.mapTerm (map toBinding ctx) tm' of
+               Left error -> do
+                 putStrLn $ "Type error: " ++ error
+                 repl ctx
+               Right (tr, ty) -> do
+                 putStrLn $ "[System Fsub] Type is " ++ prettyPrintType ty ++ "."
+                 putStrLn $ "Translation to System F: " ++ F.prettyPrintTermP 0 (map toNameBindingF ctx) tr "" ++ "."
+                 putStrLn $ "[System F] Type should be " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) (C.mapType (map toBinding ctx) ty) "" ++ "."
+                 let bf (VarBind n ty : ctx) = F.VarBind n (C.mapType ctx ty) : bf ctx
+                     bf (TyVarBind n _ : ctx) = F.TyVarBind n : bf ctx
+                     bf (AnonymousBind : ctx) = F.AnonymousBind : bf ctx
+                     bf [] = []
+                 case F.typeOf (bf $ map toBinding ctx) tr of
+                   Left error -> do
+                     putStrLn $ "[System F] Type error: " ++ error
+                   Right ty' -> do
+                     putStrLn $ "[System F] Type is " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) ty' "" ++ "."
+                 repl ctx
   where
     prettyPrintType t = prettyPrintTypeP 0 (map toNameBinding ctx) t ""
     prettyPrintTerm t = prettyPrintTermP 0 (map toNameBinding ctx) t ""
