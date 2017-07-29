@@ -1,6 +1,6 @@
 # LambdaQuest
 
-This is an implementation of System F, System Fsub and Finter, with
+This is an implementation of System F, System F<sub>&lt;:</sub> (Fsub) and F<sub>∧</sub> (Finter), with
 - primitive types: `Int`, `Real`, `Bool`, `Unit`
 - primivite values: integer literals, floating point literals, `True`, `False`, `unit`
 - built-in functions:
@@ -185,7 +185,7 @@ term       ::= '\' <variable> ':' arrowType '.' term              -- lambda abst
              | '?' <type variable> '.' term                       -- type abstraction
              | '?' <type variable> '<:' arrowType '.' term        -- bounded type abstraction [Fsub and Finter only]
              | 'if' term 'then' term 'else' term                  -- conditional
-             | 'for' <type variable> 'in' interTypeList '.' term  -- overloading
+             | 'for' <type variable> 'in' interTypeList '.' term  -- overloading [Finter only}
              | appTerm
 appTerm    ::= appTerm simpleTerm       -- function application
              | appTerm '[' type ']'     -- type application
