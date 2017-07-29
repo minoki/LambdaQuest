@@ -1,6 +1,6 @@
 # LambdaQuest
 
-This is an implementation of System F and System Fsub with
+This is an implementation of System F, System Fsub and Finter, with
 - primitive types: `Int`, `Real`, `Bool`, `Unit`
 - primivite values: integer literals, floating point literals, `True`, `False`, `unit`
 - built-in functions:
@@ -12,8 +12,10 @@ addInt, subInt, mulInt : Int -> Int -> Int
 ltInt, leInt, equalInt : Int -> Int -> Bool
 addReal, subReal, mulReal, divReal : Real -> Real -> Real
 ltReal, leReal, equalReal : Real -> Real -> Bool
+negate : Int -> Int & Real -> Real                         [Finter only]
+add, sub, mul: Int -> Int -> Int & Real -> Real -> Real    [Finter only]
 ```
-- non-trivial subtyping relation of primitives: `Int <: Real` [Fsub only]
+- non-trivial subtyping relation of primitives: `Int <: Real` [Fsub and Finter only]
 
 ## Example
 - [readline](https://hackage.haskell.org/package/readline) is required to build REPL program.
@@ -70,6 +72,30 @@ Evaluation:
 --> -4.
 > ^D
 Bye!
+```
+
+Play with Finter:
+```
+$ stack exec Finter-repl
+> let double = for a in Int, Real. \x:a. add x x
+double : Int -> (Int & Real) & Real -> Real (canonical type: Int -> Int & Real -> Real).
+Evaluation:
+for a in Int, Real. \x:a. add x x
+--> \x:Top. add x x.
+> double 1
+Type is (Int & Real) & Real (canonical type is Int).
+Evaluation:
+double 1
+--> (\x:Top. add x x) 1
+--> add 1 1
+--> 2.
+> double 2.0
+Type is Real (canonical type is Real).
+Evaluation:
+double 2.0
+--> (\x:Top. add x x) 2.0
+--> add 2.0 2.0
+--> 4.0.
 ```
 
 Church numerals:
@@ -141,23 +167,29 @@ Translation to System F: ?a. \_coercion:a -> Unit. \x:a. x.
 ## Syntax
 ```
 type       ::= 'forall' <type variable> '.' type                 -- universal quantified (forall) type
-             | 'forall' <type variable> '<:' arrowType '.' type  -- bounded universal quantified type [Fsub only]
+             | 'forall' <type variable> '<:' interType '.' type  -- bounded universal quantified type [Fsub and Finter only]
+             | interType
+interType  ::= arrowType '&' interType                           -- intersection type [Finter only]
              | arrowType
 arrowType  ::= simpleType '->' arrowType                         -- function type
              | simpleType
 simpleType ::= 'Int' | 'Real' | 'Bool' | 'Unit'
-             | 'Top'                                             -- the universal supertype [Fsub only]
+             | 'Top'                                             -- the universal supertype [Fsub and Finter only]
              | <type variable>
              | '(' type ')'
 
-term       ::= '\' <variable> ':' arrowType '.' term        -- lambda abstraction (function)
-             | '?' <type variable> '.' term                 -- type abstraction
-             | '?' <type variable> '<:' arrowType '.' term  -- bounded type abstraction [Fsub only]
-             | 'if' term 'then' term 'else' term            -- conditional
+interTypeList ::= interType ',' interTypeList
+                | interType
+
+term       ::= '\' <variable> ':' arrowType '.' term              -- lambda abstraction (function)
+             | '?' <type variable> '.' term                       -- type abstraction
+             | '?' <type variable> '<:' arrowType '.' term        -- bounded type abstraction [Fsub and Finter only]
+             | 'if' term 'then' term 'else' term                  -- conditional
+             | 'for' <type variable> 'in' interTypeList '.' term  -- overloading
              | appTerm
 appTerm    ::= appTerm simpleTerm       -- function application
              | appTerm '[' type ']'     -- type application
-             | appTerm 'as' arrowType   -- type coercion [Fsub only]
+             | appTerm 'as' arrowType   -- type coercion [Fsub and Finter only]
              | simpleTerm
 simpleTerm ::= <integer literal>
              | <floating point literal>

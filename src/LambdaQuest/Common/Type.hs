@@ -26,16 +26,20 @@ data BuiltinBinaryFn = BAddInt
                      | BEqualReal
                      deriving (Eq,Show,Enum,Bounded)
 
-data PrimValue = PVInt !Integer
-               | PVReal !Double
-               | PVBool !Bool
-               | PVUnit
-               | PVBuiltinUnary !BuiltinUnaryFn
-               | PVBuiltinBinary !BuiltinBinaryFn
-               deriving (Eq,Show)
+data PrimValueT unary binary = PVInt !Integer
+                             | PVReal !Double
+                             | PVBool !Bool
+                             | PVUnit
+                             | PVBuiltinUnary !unary
+                             | PVBuiltinBinary !binary
+                             deriving (Eq,Show)
+type PrimValue = PrimValueT BuiltinUnaryFn BuiltinBinaryFn
 
 genPrimTypeOf :: (PrimType -> t) -> (t -> t -> t) -> (PrimValue -> t)
-genPrimTypeOf tyPrim tyArr = primTypeOf
+genPrimTypeOf = genPrimTypeOfT ($) ($)
+
+genPrimTypeOfT :: ((BuiltinUnaryFn -> t) -> unary -> t) -> ((BuiltinBinaryFn -> t) -> binary -> t) -> (PrimType -> t) -> (t -> t -> t) -> (PrimValueT unary binary -> t)
+genPrimTypeOfT unaryFn binaryFn tyPrim tyArr = primTypeOf
   where
     tyInt = tyPrim PTyInt
     tyReal = tyPrim PTyReal
@@ -46,8 +50,8 @@ genPrimTypeOf tyPrim tyArr = primTypeOf
       PVReal _ -> tyReal
       PVBool _ -> tyBool
       PVUnit -> tyUnit
-      PVBuiltinUnary f -> builtinUnaryFnType f
-      PVBuiltinBinary f -> builtinBinaryFnType f
+      PVBuiltinUnary f -> unaryFn builtinUnaryFnType f
+      PVBuiltinBinary f -> binaryFn builtinBinaryFnType f
     builtinUnaryFnType f = case f of
       BNegateInt -> tyArr tyInt tyInt
       BNegateReal -> tyArr tyReal tyReal

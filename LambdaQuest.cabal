@@ -30,6 +30,13 @@ library
                        LambdaQuest.SystemFsub.TypeCheck,
                        LambdaQuest.SystemFsub.Eval,
                        LambdaQuest.SystemFsub.Coercion,
+                       LambdaQuest.Finter,
+                       LambdaQuest.Finter.Type,
+                       LambdaQuest.Finter.Subtype,
+                       LambdaQuest.Finter.PrettyPrint,
+                       LambdaQuest.Finter.Parse,
+                       LambdaQuest.Finter.TypeCheck,
+                       LambdaQuest.Finter.Eval,
                        LambdaQuest.Common.Type
   build-depends:       base >= 4.7 && < 5, parsec
   ghc-options:         -Wincomplete-patterns
@@ -66,6 +73,23 @@ executable SystemFsub-repl
                        LambdaQuest.SystemF.Parse,
                        LambdaQuest.SystemF.TypeCheck,
                        LambdaQuest.SystemF.Eval,
+                       LambdaQuest.Common.Type
+  build-depends:       base >= 4.7 && < 5, parsec, readline
+  ghc-options:         -Wincomplete-patterns
+
+executable Finter-repl
+  hs-source-dirs:      src
+  main-is:             Finter-repl.hs
+  default-language:    Haskell2010
+  other-modules:       LambdaQuest.Finter,
+                       LambdaQuest.Finter.Type,
+                       LambdaQuest.Finter.Subtype,
+                       LambdaQuest.Finter.PrettyPrint,
+                       LambdaQuest.Finter.Parse,
+                       LambdaQuest.Finter.TypeCheck,
+                       LambdaQuest.Finter.Eval,
+                       LambdaQuest.SystemFsub.Type,
+                       LambdaQuest.SystemFsub.Subtype,
                        LambdaQuest.Common.Type
   build-depends:       base >= 4.7 && < 5, parsec, readline
   ghc-options:         -Wincomplete-patterns

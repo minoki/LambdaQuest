@@ -52,17 +52,17 @@ meetType ctx (TyArr s0 s1) (TyArr t0 t1) = TyArr (joinType ctx s0 t0) <$> meetTy
 meetType ctx (TyAll n b s) (TyAll _ b' t) | b == b' = TyAll n b <$> meetType (TyVarBind n b : ctx) s t
 meetType _ _ _ = Nothing
 
-primJoinType :: PrimType -> PrimType -> Type
-primJoinType s t | s == t = TyPrim s
-primJoinType PTyInt t@PTyReal = TyPrim t
-primJoinType s@PTyReal PTyInt = TyPrim s
-primJoinType _ _ = TyTop
+primJoinType :: PrimType -> PrimType -> Maybe PrimType
+primJoinType s t | s == t = Just s
+primJoinType PTyInt t@PTyReal = Just t
+primJoinType s@PTyReal PTyInt = Just s
+primJoinType _ _ = Nothing
 
 -- (joinType ctx s t) is a type that is minimal among such u that both (s <: u) and (t <: u) are satisfied.
 joinType :: [Binding] -> Type -> Type -> Type
 joinType ctx s t | subType ctx s t = t
                  | subType ctx t s = s
-joinType ctx (TyPrim s) (TyPrim t) = primJoinType s t
+joinType ctx (TyPrim s) (TyPrim t) = maybe TyTop TyPrim (primJoinType s t)
 joinType ctx (TyArr s0 s1) (TyArr t0 t1)
   = case meetType ctx s0 t0 of
       Just u -> TyArr u $ joinType (AnonymousBind : ctx) s1 t1
