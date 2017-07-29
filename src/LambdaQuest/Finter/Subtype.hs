@@ -17,7 +17,6 @@ data ICanonicalType = CTyPrim !PrimType
 
 data CBinding = CVarBind String CCanonicalType
               | CTyVarBind String CCanonicalType
-              | CTyFor String CCanonicalType
               | CAnonymousBind
               deriving (Show)
 
@@ -62,7 +61,6 @@ normalizeContext :: [Binding] -> [CBinding]
 normalizeContext [] = []
 normalizeContext (VarBind name ty : ctx) = CVarBind name (normalizeType r ty) : r where r = normalizeContext ctx
 normalizeContext (TyVarBind name bound : ctx) = CTyVarBind name (normalizeType r bound) : r where r = normalizeContext ctx
-normalizeContext (TyFor name ty : ctx) = CTyFor name (normalizeType r ty) : r where r = normalizeContext ctx
 normalizeContext (AnonymousBind : ctx) = CAnonymousBind : normalizeContext ctx
 
 cTypeShiftC :: Int -> Int -> CCanonicalType -> CCanonicalType

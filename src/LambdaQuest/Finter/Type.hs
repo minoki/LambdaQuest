@@ -76,7 +76,6 @@ data Term = TPrimValue !PrimValue   -- primitive value
 
 data Binding = VarBind String Type   -- variable binding (name, type)
              | TyVarBind String Type -- type variable binding (name, upper bound)
-             | TyFor String Type     -- type variable (alias)
              | AnonymousBind         -- placeholder for function type
              deriving (Eq,Show)
 
