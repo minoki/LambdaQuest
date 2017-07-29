@@ -43,10 +43,12 @@ typeOf :: [Binding] -> Term -> Either String Type
 typeOf ctx tm = case tm of
   TPrimValue primValue -> return (primTypeOf primValue)
   TAbs name argType body -> do
-    retType <- typeOf (VarBind name argType : ctx) body
+    let argType' = normalizeType ctx argType
+    retType <- typeOf (VarBind name argType' : ctx) body
     return (TyArr argType retType)
   TTyAbs name bound body -> do
-    retType <- typeOf (TyVarBind name bound : ctx) body
+    let bound' = normalizeType ctx bound
+    retType <- typeOf (TyVarBind name bound' : ctx) body
     return (TyAll name bound retType)
   TRef i name -> return $ typeShift (i + 1) 0 $ getTypeFromContext ctx i
   TApp f x -> do

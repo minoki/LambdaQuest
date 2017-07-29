@@ -45,8 +45,8 @@ replCommand ctx = termDef <|> typeDef <|> normalize <|> termEval <?> "REPL Comma
       eof
       return (ReplNormalize t)
 
-data REPLBinding = Let String Term Type
-                 | TypeDef String Type
+data REPLBinding = Let String Term CCanonicalType
+                 | TypeDef String CCanonicalType
 
 toNameBinding :: REPLBinding -> NameBinding
 toNameBinding (Let name _ _) = NVarBind name
@@ -54,7 +54,7 @@ toNameBinding (TypeDef name _) = NTyVarBind name
 
 toBinding :: REPLBinding -> Binding
 toBinding (Let name _ ty) = VarBind name ty
-toBinding (TypeDef name ty) = TyVarBind name TyTop
+toBinding (TypeDef name ty) = TyVarBind name []
 
 toValueBinding :: REPLBinding -> ValueBinding
 toValueBinding (Let _ v _) = ValueBind v
@@ -65,14 +65,14 @@ resolveTypeAliasInTerm ty i = termShift 1 i . termTypeSubst ty i
 resolveTypeAliasesInTerm :: [REPLBinding] -> Int -> Term -> Term
 resolveTypeAliasesInTerm [] _ = id
 resolveTypeAliasesInTerm (Let name m ty : xs) i = resolveTypeAliasesInTerm xs (i + 1)
-resolveTypeAliasesInTerm (TypeDef name ty : xs) i = resolveTypeAliasesInTerm xs (i + 1) . resolveTypeAliasInTerm ty i
+resolveTypeAliasesInTerm (TypeDef name ty : xs) i = resolveTypeAliasesInTerm xs (i + 1) . resolveTypeAliasInTerm (canonicalToOrdinary ty) i
 
 resolveTypeAliasInType :: Type -> Int -> Type -> Type
 resolveTypeAliasInType ty i = typeShift 1 i . typeSubst ty i
 resolveTypeAliasesInType :: [REPLBinding] -> Int -> Type -> Type
 resolveTypeAliasesInType [] _ = id
 resolveTypeAliasesInType (Let name m ty : xs) i = resolveTypeAliasesInType xs (i + 1)
-resolveTypeAliasesInType (TypeDef name ty : xs) i = resolveTypeAliasesInType xs (i + 1) . resolveTypeAliasInType ty i
+resolveTypeAliasesInType (TypeDef name ty : xs) i = resolveTypeAliasesInType xs (i + 1) . resolveTypeAliasInType (canonicalToOrdinary ty) i
 
 repl :: [REPLBinding] -> IO ()
 repl ctx = do
@@ -92,7 +92,7 @@ repl ctx = do
                  repl ctx
                Right ty -> do
                  putStr $ "Type is " ++ prettyPrintType ty ++ " ("
-                 let normalized = cCanonicalToOrdinary (normalizeType (normalizeContext $ map toBinding ctx) ty)
+                 let normalized = canonicalToOrdinary (normalizeType (map toBinding ctx) ty)
                  putStrLn $ "canonical type is " ++ prettyPrintType normalized ++ ")."
                  putStrLn "Evaluation:"
                  putStrLn (prettyPrintTerm tm')
@@ -105,22 +105,24 @@ repl ctx = do
                  repl ctx
                Right ty -> do
                  putStr $ name ++ " : " ++ prettyPrintType ty ++ " ("
-                 let normalized = cCanonicalToOrdinary (normalizeType (normalizeContext $ map toBinding ctx) ty)
+                 let ty' = normalizeType (map toBinding ctx) ty
+                 let normalized = canonicalToOrdinary ty'
                  putStrLn $ "canonical type: " ++ prettyPrintType normalized ++ ")."
                  putStrLn "Evaluation:"
                  putStrLn (prettyPrintTerm tm')
                  result <- evalLoop tm'
                  case result of
-                   Just value -> repl (Let name value ty : ctx)
+                   Just value -> repl (Let name value ty' : ctx)
                    Nothing -> repl ctx
         Right (ReplTypeDef name ty) -> do
             putStrLn $ name ++ " := " ++ prettyPrintType ty ++ " ("
-            let normalized = cCanonicalToOrdinary (normalizeType (normalizeContext $ map toBinding ctx) ty)
+            let ty' = normalizeType (map toBinding ctx) ty
+            let normalized = canonicalToOrdinary ty'
             putStrLn $ "canonical type: " ++ prettyPrintType normalized ++ ")."
-            repl (TypeDef name ty : ctx)
-        Right (ReplNormalize ty) -> let ty' = resolveTypeAliasesInType ctx 0 ty
-                                        normalized = cCanonicalToOrdinary (normalizeType (normalizeContext $ map toBinding ctx) ty)
-                                    in do
+            repl (TypeDef name ty' : ctx)
+        Right (ReplNormalize ty) -> do
+          let ty' = resolveTypeAliasesInType ctx 0 ty
+              normalized = canonicalToOrdinary (normalizeType (map toBinding ctx) ty)
           putStrLn $ "Canonical type: " ++ prettyPrintType normalized
           repl ctx
   where

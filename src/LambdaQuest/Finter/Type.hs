@@ -1,6 +1,9 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE BangPatterns #-}
 module LambdaQuest.Finter.Type
   (Type(..,TyInt,TyReal,TyBool,TyUnit)
+  ,CCanonicalType
+  ,ICanonicalType(..)
   ,BuiltinUnaryFn(..)
   ,BuiltinBinaryFn(..)
   ,PrimValue
@@ -10,9 +13,14 @@ module LambdaQuest.Finter.Type
   ,isValue
   ,getTypeFromContext
   ,getBoundFromContext
+  ,getBoundFromCContext
+  ,canonicalToOrdinary
+  ,iCanonicalToOrdinary
   ,typeShift
   ,typeSubstD
   ,typeSubst
+  ,typeShiftC
+  ,typeShiftI
   ,module LambdaQuest.Common.Type
   ) where
 import LambdaQuest.Common.Type hiding (genPrimTypeOf,PrimValue,BuiltinUnaryFn,BuiltinBinaryFn)
@@ -30,6 +38,16 @@ pattern TyInt = TyPrim PTyInt
 pattern TyReal = TyPrim PTyReal
 pattern TyBool = TyPrim PTyBool
 pattern TyUnit = TyPrim PTyUnit
+
+-- compound canonical type
+type CCanonicalType = [ICanonicalType]
+
+-- individual canonical type
+data ICanonicalType = CTyPrim !PrimType
+                    | CTyArr CCanonicalType ICanonicalType
+                    | CTyRef !Int String
+                    | CTyAll String CCanonicalType ICanonicalType
+                    deriving (Show)
 
 data BuiltinUnaryFn = BUnaryCommon !CT.BuiltinUnaryFn
                     | BNegate
@@ -74,9 +92,9 @@ data Term = TPrimValue !PrimValue   -- primitive value
           | TFor String [Type] Term -- for <tyvar> in ...
           deriving (Show)
 
-data Binding = VarBind String Type   -- variable binding (name, type)
-             | TyVarBind String Type -- type variable binding (name, upper bound)
-             | AnonymousBind         -- placeholder for function type
+data Binding = VarBind String CCanonicalType   -- variable binding (name, type)
+             | TyVarBind String CCanonicalType -- type variable binding (name, upper bound)
+             | AnonymousBind                   -- placeholder for function type
              deriving (Eq,Show)
 
 isValue :: Term -> Bool
@@ -95,6 +113,13 @@ instance Eq Type where
   TyInter tys == TyInter tys'  = tys == tys'
   TyTop       == TyTop         = True
   _           == _             = False
+
+instance Eq ICanonicalType where
+  CTyPrim p    == CTyPrim p'     = p == p'
+  CTyArr s t   == CTyArr s' t'   = s == s' && t == t'
+  CTyRef i _   == CTyRef i' _    = i == i'
+  CTyAll _ b t == CTyAll _ b' t' = b == b' && t == t'
+  _            == _              = False
 
 instance Eq Term where
   TPrimValue p == TPrimValue p'  = p == p'
@@ -139,14 +164,43 @@ typeSubst = typeSubstD 0
 getTypeFromContext :: [Binding] -> Int -> Type
 getTypeFromContext ctx i
   | i < length ctx = case ctx !! i of
-                       VarBind _ t -> t
+                       VarBind _ t -> canonicalToOrdinary t
                        b -> error ("TRef: expected a variable binding, found " ++ show b)
   | otherwise = error "TRef: index out of bounds"
 
 getBoundFromContext :: [Binding] -> Int -> Type
 getBoundFromContext ctx i
   | i < length ctx = case ctx !! i of
+                       TyVarBind _ b -> canonicalToOrdinary b
+                       b -> error ("TyRef: expected a type variable binding, found " ++ show b)
+  | otherwise = error "TyRef: index out of bounds"
+
+getBoundFromCContext :: [Binding] -> Int -> CCanonicalType
+getBoundFromCContext ctx i
+  | i < length ctx = case ctx !! i of
                        TyVarBind _ b -> b
                        b -> error ("TyRef: expected a type variable binding, found " ++ show b)
   | otherwise = error "TyRef: index out of bounds"
 
+canonicalToOrdinary :: CCanonicalType -> Type
+canonicalToOrdinary [] = TyTop -- top
+canonicalToOrdinary [t] = iCanonicalToOrdinary t
+canonicalToOrdinary tys = TyInter $ map iCanonicalToOrdinary tys
+
+iCanonicalToOrdinary :: ICanonicalType -> Type
+iCanonicalToOrdinary (CTyPrim p) = TyPrim p
+iCanonicalToOrdinary (CTyArr s t) = TyArr (canonicalToOrdinary s) (iCanonicalToOrdinary t)
+iCanonicalToOrdinary (CTyRef i name) = TyRef i name
+iCanonicalToOrdinary (CTyAll name b t) = TyAll name (canonicalToOrdinary b) (iCanonicalToOrdinary t)
+
+typeShiftC :: Int -> Int -> CCanonicalType -> CCanonicalType
+typeShiftC delta i = map (typeShiftI delta i)
+
+typeShiftI :: Int -> Int -> ICanonicalType -> ICanonicalType
+typeShiftI delta i t = case t of
+  CTyPrim _ -> t
+  CTyArr s t -> CTyArr (typeShiftC delta i s) (typeShiftI delta i t)
+  CTyRef j name | j >= i, j + delta >= 0 -> CTyRef (j + delta) name
+                | j >= i, j + delta < 0 -> error "typeShift: negative index"
+                | otherwise -> t
+  CTyAll name b t -> CTyAll name (typeShiftC delta i b) (typeShiftI delta (i + 1) t)

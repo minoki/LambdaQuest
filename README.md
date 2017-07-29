@@ -83,7 +83,7 @@ Evaluation:
 for a in Int, Real. \x:a. add x x
 --> \x:Top. add x x.
 > double 1
-Type is (Int & Real) & Real (canonical type is Int).
+Type is Int & Real (canonical type is Int).
 Evaluation:
 double 1
 --> (\x:Top. add x x) 1
