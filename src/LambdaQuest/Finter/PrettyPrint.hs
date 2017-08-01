@@ -1,6 +1,8 @@
 module LambdaQuest.Finter.PrettyPrint
   (prettyPrintTypeP
   ,prettyPrintType
+  ,prettyPrintCanonicalTypeP
+  ,prettyPrintICanonicalTypeP
   ,prettyPrintTermP
   ,prettyPrintTerm
   ) where
@@ -50,6 +52,27 @@ prettyPrintTypeP p ctx t = case t of
 
 prettyPrintType :: Type -> String
 prettyPrintType t = prettyPrintTypeP 0 [] t ""
+
+prettyPrintCanonicalTypeP :: Int -> [NameBinding] -> CCanonicalType -> ShowS
+prettyPrintCanonicalTypeP p ctx [] = showString "Top"
+prettyPrintCanonicalTypeP p ctx [t] = prettyPrintICanonicalTypeP p ctx t
+prettyPrintCanonicalTypeP p ctx ts = showParen (p > 1) $ foldl1 (\x y -> x . showString " & " . y) $ map (prettyPrintICanonicalTypeP 2 ctx) ts
+
+prettyPrintICanonicalTypeP :: Int -> [NameBinding] -> ICanonicalType -> ShowS
+prettyPrintICanonicalTypeP p ctx t = case t of
+  CTyPrim PTyInt -> showString "Int"
+  CTyPrim PTyReal -> showString "Real"
+  CTyPrim PTyBool -> showString "Bool"
+  CTyPrim PTyUnit -> showString "Unit"
+  CTyArr s t -> showParen (p > 2) $ prettyPrintCanonicalTypeP 3 ctx s . showString " -> " . prettyPrintICanonicalTypeP 2 (NAnonymousBind : ctx) t
+  CTyRef i _ | i < length ctx -> case ctx !! i of
+                 NTyVarBind n -> showString n
+                 n -> showString "<invalid type variable reference #" . shows i . showString ": " . shows n . showChar '>'
+             | otherwise -> showString "<invalid type variable reference #" . shows i . showString ", index out of range>"
+  CTyAll name [] t -> showParen (p > 0) $ showString "forall " . showString name' . showString ". " . prettyPrintICanonicalTypeP 0 (NTyVarBind name' : ctx) t
+    where name' = rename (tyVarNames ctx) name
+  CTyAll name b t -> showParen (p > 0) $ showString "forall " . showString name' . showString "<:" . prettyPrintCanonicalTypeP 1 ctx b . showString ". " . prettyPrintICanonicalTypeP 0 (NTyVarBind name' : ctx) t
+    where name' = rename (tyVarNames ctx) name
 
 -- <2>: <primitive> | <variable> | (<0>)
 -- <1>: <1> <2> | <1> [ty] | <1> as <type>
