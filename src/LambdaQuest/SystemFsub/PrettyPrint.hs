@@ -77,9 +77,9 @@ prettyPrintTermP p ctx t = case t of
     BEqualReal -> "equalReal"
   TAbs name ty body -> let name' = rename (varNames ctx) name
                        in showParen (p > 0) $ showChar '\\' . showString name' . showChar ':' . prettyPrintTypeP 1 ctx ty . showString ". " . prettyPrintTermP 0 (NVarBind name' : ctx) body
-  TTyAbs name TyTop body -> let name' = rename (varNames ctx) name
+  TTyAbs name TyTop body -> let name' = rename (tyVarNames ctx) name
                             in showParen (p > 0) $ showString "?" . showString name' . showString ". " . prettyPrintTermP 0 (NTyVarBind name' : ctx) body
-  TTyAbs name b body -> let name' = rename (varNames ctx) name
+  TTyAbs name b body -> let name' = rename (tyVarNames ctx) name
                         in showParen (p > 0) $ showString "?" . showString name' . showString "<:" . prettyPrintTypeP 1 ctx b . showString ". " . prettyPrintTermP 0 (NTyVarBind name' : ctx) body
   TRef i _ | i < length ctx -> case ctx !! i of
                                  NVarBind n -> showString n
