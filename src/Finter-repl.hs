@@ -15,10 +15,9 @@ import System.Console.Readline (readline,addHistory) -- from `readline' package
 data ReplCommand = ReplEval Term
                  | ReplTermDef String Term
                  | ReplTypeDef String Type
-                 | ReplNormalize Type
 
 replCommand :: [NameBinding] -> Parser ReplCommand
-replCommand ctx = termDef <|> typeDef <|> normalize <|> termEval <?> "REPL Command"
+replCommand ctx = termDef <|> typeDef <|> termEval <?> "REPL Command"
   where
     termEval = do
       whiteSpace
@@ -39,11 +38,6 @@ replCommand ctx = termDef <|> typeDef <|> normalize <|> termEval <?> "REPL Comma
       t <- typeExpr ctx
       eof
       return (ReplTypeDef name t)
-    normalize = do
-      reserved "normalize"
-      t <- typeExpr ctx
-      eof
-      return (ReplNormalize t)
 
 data REPLBinding = Let String Term CCanonicalType
                  | TypeDef String CCanonicalType
@@ -91,9 +85,8 @@ repl ctx = do
                  putStrLn $ "Type error: " ++ error
                  repl ctx
                Right ty -> do
-                 putStr $ "Type is " ++ prettyPrintType ty ++ " ("
-                 let normalized = canonicalToOrdinary (normalizeType (map toBinding ctx) ty)
-                 putStrLn $ "canonical type is " ++ prettyPrintType normalized ++ ")."
+                 let ty' = normalizeType (map toBinding ctx) ty
+                 putStrLn $ "Type is " ++ prettyPrintCanonicalType ty' ++ "."
                  putStrLn "Evaluation:"
                  putStrLn (prettyPrintTerm tm')
                  evalLoop tm'
@@ -104,10 +97,8 @@ repl ctx = do
                  putStrLn $ "Type error: " ++ error
                  repl ctx
                Right ty -> do
-                 putStr $ name ++ " : " ++ prettyPrintType ty ++ " ("
                  let ty' = normalizeType (map toBinding ctx) ty
-                 let normalized = canonicalToOrdinary ty'
-                 putStrLn $ "canonical type: " ++ prettyPrintType normalized ++ ")."
+                 putStrLn $ name ++ " : " ++ prettyPrintCanonicalType ty' ++ "."
                  putStrLn "Evaluation:"
                  putStrLn (prettyPrintTerm tm')
                  result <- evalLoop tm'
@@ -115,18 +106,11 @@ repl ctx = do
                    Just value -> repl (Let name value ty' : ctx)
                    Nothing -> repl ctx
         Right (ReplTypeDef name ty) -> do
-            putStrLn $ name ++ " := " ++ prettyPrintType ty ++ " ("
             let ty' = normalizeType (map toBinding ctx) ty
-            let normalized = canonicalToOrdinary ty'
-            putStrLn $ "canonical type: " ++ prettyPrintType normalized ++ ")."
+            putStrLn $ name ++ " := " ++ prettyPrintCanonicalType ty' ++ "."
             repl (TypeDef name ty' : ctx)
-        Right (ReplNormalize ty) -> do
-          let ty' = resolveTypeAliasesInType ctx 0 ty
-              normalized = canonicalToOrdinary (normalizeType (map toBinding ctx) ty)
-          putStrLn $ "Canonical type: " ++ prettyPrintType normalized
-          repl ctx
   where
-    prettyPrintType t = prettyPrintTypeP 0 (map toNameBinding ctx) t ""
+    prettyPrintCanonicalType t = prettyPrintCanonicalTypeP 0 (map toNameBinding ctx) t ""
     prettyPrintTerm t = prettyPrintTermP 0 (map toNameBinding ctx) t ""
     evalLoop :: Term -> IO (Maybe Term)
     evalLoop t = case eval1 (map toValueBinding ctx) t of
