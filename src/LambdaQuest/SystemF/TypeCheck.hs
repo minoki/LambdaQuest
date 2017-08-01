@@ -31,12 +31,8 @@ primTypeOf = genPrimTypeOf TyPrim TyArr
 typeOf :: [Binding] -> Term -> Either String Type
 typeOf ctx tm = case tm of
   TPrimValue primValue -> return (primTypeOf primValue)
-  TAbs name argType body -> do
-    retType <- typeOf (VarBind name argType : ctx) body
-    return (TyArr argType retType)
-  TTyAbs name body -> do
-    retType <- typeOf (TyVarBind name : ctx) body
-    return (TyAll name retType)
+  TAbs name argType body -> TyArr argType <$> typeOf (VarBind name argType : ctx) body
+  TTyAbs name body -> TyAll name <$> typeOf (TyVarBind name : ctx) body
   TRef i name -> return $ typeShift (i + 1) 0 $ getTypeFromContext ctx i
   TApp f x -> do
     fnType <- typeOf ctx f

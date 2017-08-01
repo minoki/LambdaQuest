@@ -41,12 +41,10 @@ typeOf ctx tm = case tm of
   TPrimValue primValue -> return (primTypeOf primValue)
   TAbs name argType body -> do
     let argType' = normalizeType ctx argType
-    retType <- typeOf (VarBind name argType' : ctx) body
-    return (TyArr argType retType)
+    TyArr argType <$> typeOf (VarBind name argType' : ctx) body
   TTyAbs name bound body -> do
     let bound' = normalizeType ctx bound
-    retType <- typeOf (TyVarBind name bound' : ctx) body
-    return (TyAll name bound retType)
+    TyAll name bound <$> typeOf (TyVarBind name bound' : ctx) body
   TRef i name -> return $ typeShift (i + 1) 0 $ getTypeFromContext ctx i
   TApp f x -> do
     fnType <- typeOf ctx f
