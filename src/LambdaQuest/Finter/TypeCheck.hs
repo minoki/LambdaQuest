@@ -1,7 +1,9 @@
 module LambdaQuest.Finter.TypeCheck where
 import LambdaQuest.Finter.Type
 import LambdaQuest.Finter.Subtype
+import Data.List
 import Control.Monad
+import Control.Arrow
 
 -- replaces occurrences of TyRef j, TRef j (j >= i) with TyRef (j + delta), TRef (j + delta)
 termShift :: Int -> Int -> Term -> Term
@@ -34,11 +36,6 @@ termTypeSubstD depth s i t = case t of
 -- replaces occurrences of TyRef j (j > i) with TyRef (j-1), and TyRef i with the given type
 termTypeSubst = termTypeSubstD 0
 
-mkInter :: [Type] -> Type
-mkInter [] = TyTop
-mkInter [t] = t
-mkInter tys = TyInter tys
-
 typeOf :: [Binding] -> Term -> Either String Type
 typeOf ctx tm = case tm of
   TPrimValue primValue -> return (primTypeOf primValue)
@@ -54,31 +51,39 @@ typeOf ctx tm = case tm of
   TApp f x -> do
     fnType <- typeOf ctx f
     actualArgType <- typeOf ctx x
-    return $ mkInter $ do
-      TyArr expectedArgType retType <- exposeType ctx fnType -- Left ("invalid function application (expected function type, got: " ++ show fnType ++ ")")
-      guard (subType ctx actualArgType expectedArgType) -- Left ("type error (expected: " ++ show expectedArgType ++ ", got: " ++ show actualArgType ++ ")")
-      return $ typeShift (-1) 0 retType
+    case [(expectedArgType,retType) | TyArr expectedArgType retType <- exposeType ctx fnType] of
+      [] -> Left ("invalid function application (expected function type, got: " ++ show fnType ++ ")")
+      xs -> case [typeShift (-1) 0 retType | (expectedArgType,retType) <- xs, subType ctx actualArgType expectedArgType] of
+        [] -> Left ("type error (expected: " ++ concat (intersperse ", " $ map (show . fst) xs) ++ ", got: " ++ show actualArgType ++ ")")
+        [y] -> return y
+        ys -> return $ TyInter ys
   TTyApp f t -> do
     fnType <- typeOf ctx f
-    return $ mkInter $ do
-      TyAll _name bound bodyType <- exposeType ctx fnType -- Left ("invalid type application (expected forall type, got: " ++ show fnType ++ ")")
-      guard (subType ctx t bound) -- Left ("invalid type application (" ++ show t ++ " is not a subtype of " ++ show bound ++ ")")
-      return (typeSubst t 0 bodyType)
+    case [(bound,bodyType) | TyAll _name bound bodyType <- exposeType ctx fnType] of
+      [] -> Left ("invalid type application (expected forall type, got: " ++ show fnType ++ ")")
+      xs -> case [typeSubst t 0 bodyType | (bound,bodyType) <- xs, subType ctx t bound] of
+        [] -> Left ("invalid type application (" ++ show t ++ " is not a subtype of " ++ concat (intersperse ", " $ map (show . fst) xs) ++ ")")
+        [y] -> return y
+        ys -> return $ TyInter ys
   TIf cond then_ else_ -> do
     condType <- typeOf ctx cond
     thenType <- typeOf ctx then_
     elseType <- typeOf ctx else_
-    return $ mkInter $ do
-      TyBool <- exposeType ctx condType -- Left "if-then-else: conditon must be boolean"
-      return (joinType ctx thenType elseType)
+    if any (== TyBool) $ exposeType ctx condType
+      then return (joinType ctx thenType elseType)
+      else Left "if-then-else: conditon must be boolean"
   TCoerce x t -> do
     xt <- typeOf ctx x
     if subType ctx xt t
       then return t
       else Left ("type coercion: the actual type " ++ show xt ++ " is not a subtype of " ++ show t)
   TFor name tys x -> do
-    return $ mkInter $ do
-      ty <- tys
-      case typeOf ctx (termTypeSubst ty 0 x) of
-        Left err -> []
-        Right ty' -> [ty']
+    let gather :: [Either a b] -> Either [a] [b]
+        gather (Right x:xs) = Right (x : foldr (const id ||| (:)) [] xs)
+        gather (Left err:xs) = left (err:) $ gather xs
+        gather [] = Left []
+    case gather [typeOf ctx (termTypeSubst ty 0 x) | ty <- tys] of
+      Left errors -> Left $ "type alternation failed: " ++ concat (intersperse ", " errors)
+      Right [] -> error "internal error in handling type alternation"
+      Right [y] -> return y
+      Right ys -> return $ TyInter ys
