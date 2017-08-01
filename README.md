@@ -78,19 +78,19 @@ Play with Finter:
 ```
 $ stack exec Finter-repl
 > let double = for a in Int, Real. \x:a. add x x
-double : Int -> (Int & Real) & Real -> Real (canonical type: Int -> Int & Real -> Real).
+double : Int -> Int & Real -> Real.
 Evaluation:
 for a in Int, Real. \x:a. add x x
 --> \x:Top. add x x.
 > double 1
-Type is Int & Real (canonical type is Int).
+Type is Int.
 Evaluation:
 double 1
 --> (\x:Top. add x x) 1
 --> add 1 1
 --> 2.
 > double 2.0
-Type is Real (canonical type is Real).
+Type is Real.
 Evaluation:
 double 2.0
 --> (\x:Top. add x x) 2.0
@@ -185,7 +185,7 @@ term       ::= '\' <variable> ':' arrowType '.' term              -- lambda abst
              | '?' <type variable> '.' term                       -- type abstraction
              | '?' <type variable> '<:' arrowType '.' term        -- bounded type abstraction [Fsub and Finter only]
              | 'if' term 'then' term 'else' term                  -- conditional
-             | 'for' <type variable> 'in' interTypeList '.' term  -- overloading [Finter only]
+             | 'for' <type variable> 'in' interTypeList '.' term  -- type alternation [Finter only]
              | appTerm
 appTerm    ::= appTerm simpleTerm       -- function application
              | appTerm '[' type ']'     -- type application
