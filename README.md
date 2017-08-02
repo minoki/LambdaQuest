@@ -96,6 +96,11 @@ double 2.0
 --> (\x:Top. add x x) 2.0
 --> add 2.0 2.0
 --> 4.0.
+> add 0xdead.beefp-16 0x.021524111p+4
+Type is Real.
+Evaluation:
+add 0.8698386510368437 0.13016134896315634
+--> 1.0.
 ```
 
 Church numerals:

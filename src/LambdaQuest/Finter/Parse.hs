@@ -4,6 +4,7 @@ import Text.Parsec
 import qualified Text.Parsec.Token as PT
 import Data.List (elemIndex)
 import Data.Foldable (foldl')
+import qualified LambdaQuest.Common.Parse as CP
 
 type Parser = Parsec String ()
 
@@ -53,9 +54,7 @@ identifier = PT.identifier tokenParser :: Parser String
 reserved = PT.reserved tokenParser :: String -> Parser ()
 operator = PT.operator tokenParser :: Parser String
 reservedOp = PT.reservedOp tokenParser :: String -> Parser ()
-natural = PT.natural tokenParser :: Parser Integer
-integer = PT.integer tokenParser :: Parser Integer
-float = PT.float tokenParser :: Parser Double
+naturalOrFloat = CP.naturalOrFloat tokenParser :: Parser (Either Integer Double)
 symbol = PT.symbol tokenParser :: String -> Parser String
 parens = PT.parens tokenParser
 braces = PT.braces tokenParser
@@ -104,8 +103,7 @@ typeExpr ctx = forallExpr ctx <|> interTypeExpr ctx
 simpleTerm :: [NameBinding] -> Parser Term
 simpleTerm ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
                  <|> (reserved "False" >> return (TPrimValue $ PVBool False))
-                 <|> (try ((TPrimValue . PVReal) <$> float) <?> "floating point literal")
-                 <|> (((TPrimValue . PVInt) <$> natural) <?> "integer literal")
+                 <|> (either (TPrimValue . PVInt) (TPrimValue . PVReal) <$> naturalOrFloat <?> "number")
                  <|> parens (term ctx)
                  <|> choice [reserved name >> return (TPrimValue v) | (name,v) <- builtinFunctions]
                  <|> (do name <- identifier <?> "variable"
