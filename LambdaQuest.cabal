@@ -38,7 +38,8 @@ library
                        LambdaQuest.Finter.TypeCheck,
                        LambdaQuest.Finter.Eval,
                        LambdaQuest.Common.Type,
-                       LambdaQuest.Common.Parse
+                       LambdaQuest.Common.Parse,
+                       LambdaQuest.Common.Parse.Number
   build-depends:       base >= 4.7 && < 5, parsec
   ghc-options:         -Wincomplete-patterns
 
@@ -53,7 +54,8 @@ executable SystemF-repl
                        LambdaQuest.SystemF.TypeCheck,
                        LambdaQuest.SystemF.Eval,
                        LambdaQuest.Common.Type,
-                       LambdaQuest.Common.Parse
+                       LambdaQuest.Common.Parse,
+                       LambdaQuest.Common.Parse.Number
   build-depends:       base >= 4.7 && < 5, parsec, readline
   ghc-options:         -Wincomplete-patterns
 
@@ -76,7 +78,8 @@ executable SystemFsub-repl
                        LambdaQuest.SystemF.TypeCheck,
                        LambdaQuest.SystemF.Eval,
                        LambdaQuest.Common.Type,
-                       LambdaQuest.Common.Parse
+                       LambdaQuest.Common.Parse,
+                       LambdaQuest.Common.Parse.Number
   build-depends:       base >= 4.7 && < 5, parsec, readline
   ghc-options:         -Wincomplete-patterns
 
@@ -94,7 +97,8 @@ executable Finter-repl
                        LambdaQuest.SystemFsub.Type,
                        LambdaQuest.SystemFsub.Subtype,
                        LambdaQuest.Common.Type,
-                       LambdaQuest.Common.Parse
+                       LambdaQuest.Common.Parse,
+                       LambdaQuest.Common.Parse.Number
   build-depends:       base >= 4.7 && < 5, parsec, readline
   ghc-options:         -Wincomplete-patterns
 
