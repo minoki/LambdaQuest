@@ -42,6 +42,14 @@ Evaluation:
 (?a. \x:a. x) [Int] 123
 --> (\x:Int. x) 123
 --> 123.
+> let id = ?a. \x:a. x in id [Int -> Int] (id [Int])
+Type is Int -> Int.
+Evaluation:
+let id = ?a. \x:a. x in id [Int -> Int] (id [Int])
+--> (?a. \x:a. x) [Int -> Int] ((?a. \x:a. x) [Int])
+--> (\x:Int -> Int. x) ((?a. \x:a. x) [Int])
+--> (\x:Int -> Int. x) (\x:Int. x)
+--> \x:Int. x.
 > ^D
 Bye!
 ```
@@ -189,6 +197,7 @@ interTypeList ::= interType ',' interTypeList
 term       ::= '\' <variable> ':' arrowType '.' term              -- lambda abstraction (function)
              | '?' <type variable> '.' term                       -- type abstraction
              | '?' <type variable> '<:' arrowType '.' term        -- bounded type abstraction [Fsub and Finter only]
+             | 'let' <variable> '=' term 'in' term                -- variable binding
              | 'if' term 'then' term 'else' term                  -- conditional
              | 'for' <type variable> 'in' interTypeList '.' term  -- type alternation [Finter only]
              | appTerm
