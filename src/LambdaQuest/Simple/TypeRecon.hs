@@ -22,26 +22,19 @@ type UTerm = TermT IndexedTypeHole
 type UBinding = BindingT IndexedTypeHole
 pattern UTyHole i = TyExtra (IndexedTypeHole i)
 
+newIndexedTypeHole :: (MonadState Int m) => m IndexedTypeHole
+newIndexedTypeHole = do i <- get
+                        modify' (+1)
+                        return $ IndexedTypeHole i
+
 newTypeHole :: (MonadState Int m) => m UType
-newTypeHole = do i <- get
-                 modify' (+1)
-                 return $ UTyHole i
+newTypeHole = TyExtra <$> newIndexedTypeHole
 
 assignTypeIdTy :: (MonadState Int m) => HoledType -> m UType
-assignTypeIdTy ty = case ty of
-  TyPrim p -> return $ TyPrim p
-  TyArr s t -> TyArr <$> assignTypeIdTy s <*> assignTypeIdTy t
-  TyExtra TypeHole -> newTypeHole
+assignTypeIdTy = traverse (\_ -> newIndexedTypeHole)
 
 assignTypeIdTm :: (MonadState Int m) => HTerm -> m UTerm
-assignTypeIdTm tm = case tm of
-  TPrimValue v -> return $ TPrimValue v
-  TAbs name ty body -> TAbs name <$> assignTypeIdTy ty <*> assignTypeIdTm body
-  TRef i name -> return $ TRef i name
-  TApp f x -> TApp <$> assignTypeIdTm f <*> assignTypeIdTm x
-  TLet name def body -> TLet name <$> assignTypeIdTm def <*> assignTypeIdTm body
-  TIf co th el -> TIf <$> assignTypeIdTm co <*> assignTypeIdTm th <*> assignTypeIdTm el
-  -- HTTyAnn tm ty -> UTyAnn <$> assignTypeIdTm tm <*> assignTypeIdTy ty
+assignTypeIdTm = traverse (\_ -> newIndexedTypeHole)
 
 constraints :: [UBinding] -> UTerm -> WriterT [(UType,UType)] (State Int) UType
 constraints ctx tm = case tm of
@@ -53,7 +46,7 @@ constraints ctx tm = case tm of
     actualArgType <- constraints ctx x
     case fnType of
       TyArr expectedArgType retType | actualArgType == expectedArgType -> return $ typeShift (-1) 0 retType
-                                     | otherwise -> tell [(expectedArgType, actualArgType)] >> return retType
+                                    | otherwise -> tell [(expectedArgType, actualArgType)] >> return retType
       _ -> do h <- newTypeHole
               tell [(fnType, TyArr actualArgType h)]
               return h
@@ -80,9 +73,7 @@ collectConstraints ctx tm = flip evalState 0 $ runWriterT $ do
   ((,) tm') <$> constraints ctx tm'
 
 freeVars :: UType -> [Int]
-freeVars (TyPrim _) = []
-freeVars (TyArr s t) = freeVars s ++ freeVars t
-freeVars (TyExtra (IndexedTypeHole i)) = [i]
+freeVars = foldMap (\(IndexedTypeHole i) -> [i])
 
 replaceHole :: Int -> UType -> UType -> UType
 replaceHole i s t = case t of
@@ -111,14 +102,7 @@ applyUnificationResultTy m t = case t of
                               | otherwise -> t
 
 applyUnificationResultTm :: Map.Map Int UType -> UTerm -> UTerm
-applyUnificationResultTm m t = case t of
-  TPrimValue _ -> t
-  TAbs name ty body -> TAbs name (applyUnificationResultTy m ty) (applyUnificationResultTm m body)
-  TRef _ _ -> t
-  TApp s t -> TApp (applyUnificationResultTm m s) (applyUnificationResultTm m t)
-  TLet name def body -> TLet name (applyUnificationResultTm m def) (applyUnificationResultTm m body)
-  TIf cond then_ else_ -> TIf (applyUnificationResultTm m cond) (applyUnificationResultTm m then_) (applyUnificationResultTm m else_)
-  -- UTyAnn t ty -> UTyAnn (applyUnificationResultTm m t) (applyUnificationResultTy m ty)
+applyUnificationResultTm m = tyMapOnTerm (applyUnificationResultTy m)
 
 instance ExtraTypeParser TypeHole where
   extraSimpleTypeExpr' = reserved "_" >> return HTyHole
