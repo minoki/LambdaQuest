@@ -27,6 +27,9 @@ typeOf ctx tm = case tm of
       TyArr expectedArgType retType | actualArgType == expectedArgType -> return $ typeShift (-1) 0 retType
                                     | otherwise -> Left ("type error (expected: " ++ show expectedArgType ++ ", got: " ++ show actualArgType ++ ")")
       _ -> Left ("invalid function application (expected function type, got: " ++ show fnType ++ ")")
+  TLet name def body -> do
+    definedType <- typeOf ctx def
+    typeOf (VarBind name definedType : ctx) body
   TIf cond then_ else_ -> do
     condType <- typeOf ctx cond
     thenType <- typeOf ctx then_

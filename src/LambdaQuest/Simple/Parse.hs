@@ -71,6 +71,7 @@ class TypeParser ty => TermParser ty tm | tm -> ty where
   tAbs :: String -> ty -> tm -> tm
   tRef :: Int -> String -> tm
   tApp :: tm -> tm -> tm
+  tLet :: String -> tm -> tm -> tm
   tIf :: tm -> tm -> tm -> tm
 
 instance TermParser Type Term where
@@ -78,6 +79,7 @@ instance TermParser Type Term where
   tAbs = TAbs
   tRef = TRef
   tApp = TApp
+  tLet = TLet
   tIf = TIf
 
 simpleTypeExpr :: (TypeParser ty) => [NameBinding] -> Parser ty
@@ -120,6 +122,7 @@ appTerm ctx = do x <- simpleTerm ctx
 term :: (TermParser ty tm) => [NameBinding] -> Parser tm
 term ctx = lambdaAbstraction
            <|> ifThenElse
+           <|> letIn
            <|> appTerm ctx
            <?> "expression"
   where lambdaAbstraction = do reservedOp "\\"
@@ -128,6 +131,13 @@ term ctx = lambdaAbstraction
                                reservedOp "."
                                body <- term (NVarBind name : ctx)
                                return (tAbs name varType body)
+        letIn = do reserved "let"
+                   name <- identifier
+                   reservedOp "="
+                   definition <- term ctx
+                   reserved "in"
+                   body <- term (NVarBind name : ctx)
+                   return $ tLet name definition body
         ifThenElse = do reserved "if"
                         cond <- term ctx
                         reserved "then"

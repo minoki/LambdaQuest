@@ -23,6 +23,7 @@ data Term = TPrimValue !PrimValue -- primitive value
           | TAbs String Type Term -- lambda abstraction
           | TRef !Int String      -- variable (de Bruijn index)
           | TApp Term Term        -- function application
+          | TLet String Term Term -- let-in
           | TIf Term Term Term    -- if-then-else
           deriving (Show)
 
@@ -60,6 +61,7 @@ instance Eq Term where
   TAbs _ t x   == TAbs _ t' x'  = t == t' && x == x' -- ignore variable name
   TRef i _     == TRef i' _     = i == i'
   TApp s t     == TApp s' t'    = s == s' && t == t'
+  TLet _ s t   == TLet _ s' t'  = s == s' && t == t'
   TIf s t u    == TIf s' t' u'  = s == s' && t == t' && u == u'
   _            == _             = False
 

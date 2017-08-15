@@ -19,6 +19,7 @@ data HTerm = HTPrimValue !PrimValue       -- primitive value
            | HTAbs String HoledType HTerm -- lambda abstraction
            | HTRef !Int String            -- variable (de Bruijn index)
            | HTApp HTerm HTerm            -- function application
+           | HTLet String HTerm HTerm     -- let-in
            | HTIf HTerm HTerm HTerm       -- if-then-else
            | HTTyAnn HTerm HoledType      -- type annotation
            deriving (Show)
@@ -32,6 +33,7 @@ data UTerm = UTPrimValue !PrimValue   -- primitive value
            | UTAbs String UType UTerm -- lambda abstraction
            | UTRef !Int String        -- variable (de Bruijn index)
            | UTApp UTerm UTerm        -- function application
+           | UTLet String UTerm UTerm -- let-in
            | UTIf UTerm UTerm UTerm   -- if-then-else
            | UTyAnn UTerm UType
            deriving (Show)
@@ -64,6 +66,7 @@ assignTypeIdTm tm = case tm of
   HTAbs name ty body -> UTAbs name <$> assignTypeIdTy ty <*> assignTypeIdTm body
   HTRef i name -> return $ UTRef i name
   HTApp f x -> UTApp <$> assignTypeIdTm f <*> assignTypeIdTm x
+  HTLet name def body -> UTLet name <$> assignTypeIdTm def <*> assignTypeIdTm body
   HTIf co th el -> UTIf <$> assignTypeIdTm co <*> assignTypeIdTm th <*> assignTypeIdTm el
   HTTyAnn tm ty -> UTyAnn <$> assignTypeIdTm tm <*> assignTypeIdTy ty
 
@@ -87,6 +90,9 @@ constraints ctx tm = case tm of
       _ -> do h <- newTypeHole
               tell [(fnType, UTyArr actualArgType h)]
               return h
+  UTLet name def body -> do
+    defType <- constraints ctx def
+    constraints (UVarBind name defType : ctx) body
   UTIf cond then_ else_ -> do
     condType <- constraints ctx cond
     thenType <- constraints ctx then_
@@ -143,6 +149,7 @@ applyUnificationResultTm m t = case t of
   UTAbs name ty body -> UTAbs name (applyUnificationResultTy m ty) (applyUnificationResultTm m body)
   UTRef _ _ -> t
   UTApp s t -> UTApp (applyUnificationResultTm m s) (applyUnificationResultTm m t)
+  UTLet name def body -> UTLet name (applyUnificationResultTm m def) (applyUnificationResultTm m body)
   UTIf cond then_ else_ -> UTIf (applyUnificationResultTm m cond) (applyUnificationResultTm m then_) (applyUnificationResultTm m else_)
   UTyAnn t ty -> UTyAnn (applyUnificationResultTm m t) (applyUnificationResultTy m ty)
 
@@ -159,6 +166,7 @@ instance TermParser HoledType HTerm where
   tAbs = HTAbs
   tRef = HTRef
   tApp = HTApp
+  tLet = HTLet
   tIf = HTIf
 
 parseHoledTerm :: SourceName -> String -> Either ParseError HTerm
