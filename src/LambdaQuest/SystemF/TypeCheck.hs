@@ -46,6 +46,9 @@ typeOf ctx tm = case tm of
     case fnType of
       TyAll _name bodyType -> return (typeSubst t 0 bodyType)
       _ -> Left ("invalid type application (expected forall type, got: " ++ show fnType ++ ")")
+  TLet name def body -> do
+    definedType <- typeOf ctx def
+    typeOf (VarBind name definedType : ctx) body
   TIf cond then_ else_ -> do
     condType <- typeOf ctx cond
     thenType <- typeOf ctx then_

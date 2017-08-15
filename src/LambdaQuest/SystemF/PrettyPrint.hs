@@ -47,7 +47,7 @@ prettyPrintType t = prettyPrintTypeP 0 [] t ""
 
 -- <2>: <primitive> | <variable> | (<0>)
 -- <1>: <1> <2> | <1> [ty]
--- <0>: \x:t. <0> | ?a. <0> | if <0> then <0> else <0>
+-- <0>: \x:t. <0> | ?a. <0> | let x = <0> in <0> | if <0> then <0> else <0>
 prettyPrintTermP :: Int -> [NameBinding] -> Term -> ShowS
 prettyPrintTermP p ctx t = case t of
   TPrimValue (PVInt x) -> shows x
@@ -82,6 +82,8 @@ prettyPrintTermP p ctx t = case t of
            | otherwise -> showString "<invalid variable reference #" . shows i . showString ", index out of range>"
   TApp u v -> showParen (p > 1) $ prettyPrintTermP 1 ctx u . showChar ' ' . prettyPrintTermP 2 ctx v
   TTyApp u t -> showParen (p > 1) $ prettyPrintTermP 1 ctx u . showString " [" . prettyPrintTypeP 0 ctx t . showChar ']'
+  TLet name def body -> let name' = rename (varNames ctx) name
+                        in showParen (p > 0) $ showString "let " . showString name' . showString " = " . prettyPrintTermP 0 ctx def . showString " in " . prettyPrintTermP 0 (NVarBind name' : ctx) body
   TIf cond then_ else_ -> showParen (p > 0) $ showString "if " . prettyPrintTermP 0 ctx cond . showString " then " . prettyPrintTermP 0 ctx then_ . showString " else " . prettyPrintTermP 0 ctx else_
 
 prettyPrintTerm :: Term -> String

@@ -106,6 +106,7 @@ appTerm ctx = do x <- simpleTerm ctx
 term :: [NameBinding] -> Parser Term
 term ctx = lambdaAbstraction
            <|> typeAbstraction
+           <|> letIn
            <|> ifThenElse
            <|> appTerm ctx
            <?> "expression"
@@ -121,6 +122,13 @@ term ctx = lambdaAbstraction
                              reservedOp "."
                              body <- term (NTyVarBind name : ctx)
                              return (TTyAbs name body)
+        letIn = do reserved "let"
+                   name <- identifier
+                   reservedOp "="
+                   definition <- term ctx
+                   reserved "in"
+                   body <- term (NVarBind name : ctx)
+                   return $ TLet name definition body
         ifThenElse = do reserved "if"
                         cond <- term ctx
                         reserved "then"

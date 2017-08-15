@@ -26,6 +26,7 @@ data Term = TPrimValue !PrimValue -- primitive value
           | TRef !Int String      -- variable (de Bruijn index)
           | TApp Term Term        -- function application
           | TTyApp Term Type      -- type application
+          | TLet String Term Term -- let-in
           | TIf Term Term Term    -- if-then-else
           deriving (Show)
 
@@ -56,6 +57,7 @@ instance Eq Term where
   TRef i _     == TRef i' _     = i == i'
   TApp s t     == TApp s' t'    = s == s' && t == t'
   TTyApp s t   == TTyApp s' t'  = s == s' && t == t'
+  TLet _ s t   == TLet _ s' t'  = s == s' && t == t'
   TIf s t u    == TIf s' t' u'  = s == s' && t == t' && u == u'
   _            == _             = False
 
