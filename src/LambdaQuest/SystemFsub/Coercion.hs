@@ -198,6 +198,10 @@ mapTerm ctx (TTyApp s ty) = do
       | Just c <- subType ctx ty bound -> return (F.TApp (F.TTyApp (applyCoercion ec s') ty') (coercionToTerm ctx c), typeSubst ty 0 bodyType)
       | otherwise -> Left $ "invalid type application (" ++ show ty ++ " is not a subtype of " ++ show bound ++ ")"
     _ -> Left $ "invalid type application (expected forall type, got: " ++ show fnType ++ ")"
+mapTerm ctx (TLet name def body) = do
+  (def', defType) <- mapTerm ctx def
+  (body', bodyType) <- mapTerm (VarBind name defType : ctx) body
+  return (F.TLet name def' body', bodyType)
 mapTerm ctx (TIf cond then_ else_) = do
   (cond', condType) <- mapTerm ctx cond
   (then', thenType) <- mapTerm ctx then_

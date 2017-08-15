@@ -28,7 +28,7 @@ replCommand ctx = termDef <|> typeDef <|> translate <|> termEval <?> "REPL Comma
       t <- term ctx
       eof
       return (ReplEval t)
-    termDef = do
+    termDef = try $ do
       reserved "let"
       name <- identifier
       reservedOp "="
