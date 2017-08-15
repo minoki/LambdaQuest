@@ -1,37 +1,44 @@
 {-# LANGUAGE PatternSynonyms #-}
 module LambdaQuest.Simple.Type
-  (Type(..,TyInt,TyReal,TyBool,TyUnit)
-  ,Term(..)
+  (TypeT(..,TyInt,TyReal,TyBool,TyUnit),Type
+  ,TermT(..),Term
   ,isValue
-  ,Binding(..)
+  ,BindingT(..),Binding
   ,getTypeFromContext
   ,module LambdaQuest.Common.Type
   ,GType(..)
   ) where
 import LambdaQuest.Common.Type hiding (genPrimTypeOf)
+import Data.Void
 
-data Type = TyPrim !PrimType
-          | TyArr Type Type
-          deriving (Show)
+data TypeT a = TyPrim !PrimType
+             | TyArr (TypeT a) (TypeT a)
+             | TyExtra !a
+             deriving (Show)
 
 pattern TyInt = TyPrim PTyInt
 pattern TyReal = TyPrim PTyReal
 pattern TyBool = TyPrim PTyBool
 pattern TyUnit = TyPrim PTyUnit
 
-data Term = TPrimValue !PrimValue -- primitive value
-          | TAbs String Type Term -- lambda abstraction
-          | TRef !Int String      -- variable (de Bruijn index)
-          | TApp Term Term        -- function application
-          | TLet String Term Term -- let-in
-          | TIf Term Term Term    -- if-then-else
-          deriving (Show)
+data TermT a = TPrimValue !PrimValue             -- primitive value
+             | TAbs String (TypeT a) (TermT a)   -- lambda abstraction
+             | TRef !Int String                  -- variable (de Bruijn index)
+             | TApp (TermT a) (TermT a)          -- function application
+             | TLet String (TermT a) (TermT a)   -- let-in
+             | TIf (TermT a) (TermT a) (TermT a) -- if-then-else
+             -- | TTyAnn (TermT a) (TypeT a) -- type annotation
+             deriving (Show)
 
-data Binding = VarBind String Type -- variable binding (name, type)
-             | AnonymousBind       -- placeholder for function type
-             deriving (Eq,Show)
+data BindingT a = VarBind String (TypeT a) -- variable binding (name, type)
+                | AnonymousBind            -- placeholder for function type
+                deriving (Eq,Show)
 
-isValue :: Term -> Bool
+type Type = TypeT Void
+type Term = TermT Void
+type Binding = BindingT Void
+
+isValue :: TermT a -> Bool
 isValue t = case t of
   TPrimValue _ -> True
   TAbs _ _ _ -> True
@@ -47,16 +54,17 @@ class GType ty where
   tyReal = tyPrim PTyReal
   tyBool = tyPrim PTyBool
 
-instance GType Type where
+instance GType (TypeT a) where
   tyPrim = TyPrim
   tyArr = TyArr
 
-instance Eq Type where
+instance (Eq a) => Eq (TypeT a) where
   TyPrim p  == TyPrim p'   = p == p'
   TyArr s t == TyArr s' t' = s == s' && t == t'
+  TyExtra x == TyExtra x'  = x == x'
   _         == _           = False
 
-instance Eq Term where
+instance (Eq a) => Eq (TermT a) where
   TPrimValue p == TPrimValue p' = p == p'
   TAbs _ t x   == TAbs _ t' x'  = t == t' && x == x' -- ignore variable name
   TRef i _     == TRef i' _     = i == i'
@@ -65,7 +73,7 @@ instance Eq Term where
   TIf s t u    == TIf s' t' u'  = s == s' && t == t' && u == u'
   _            == _             = False
 
-getTypeFromContext :: [Binding] -> Int -> Type
+getTypeFromContext :: (Show a) => [BindingT a] -> Int -> TypeT a
 getTypeFromContext ctx i
   | i < length ctx = case ctx !! i of
                        VarBind _ t -> t

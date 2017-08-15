@@ -6,6 +6,7 @@ import Text.Parsec
 import qualified Text.Parsec.Token as PT
 import Data.List (elemIndex)
 import Data.Foldable (foldl')
+import Data.Void
 import qualified LambdaQuest.Common.Parse as CP
 
 type Parser = Parsec String ()
@@ -58,13 +59,21 @@ braces = PT.braces tokenParser
 brackets = PT.brackets tokenParser
 whiteSpace = PT.whiteSpace tokenParser
 
+class ExtraTypeParser x where
+  extraSimpleTypeExpr' :: Parser (TypeT x)
+  defaultType' :: Parser (TypeT x)
+
+instance ExtraTypeParser Void where
+  extraSimpleTypeExpr' = parserZero
+  defaultType' = parserZero
+
 class GType ty => TypeParser ty where
   extraSimpleTypeExpr :: Parser ty
   defaultType :: Parser ty
 
-instance TypeParser Type where
-  extraSimpleTypeExpr = parserZero
-  defaultType = parserZero
+instance (ExtraTypeParser x) => TypeParser (TypeT x)  where
+  extraSimpleTypeExpr = extraSimpleTypeExpr'
+  defaultType = defaultType'
 
 class TypeParser ty => TermParser ty tm | tm -> ty where
   tPrimValue :: PrimValue -> tm
@@ -74,7 +83,7 @@ class TypeParser ty => TermParser ty tm | tm -> ty where
   tLet :: String -> tm -> tm -> tm
   tIf :: tm -> tm -> tm -> tm
 
-instance TermParser Type Term where
+instance (ExtraTypeParser x) => TermParser (TypeT x) (TermT x) where
   tPrimValue = TPrimValue
   tAbs = TAbs
   tRef = TRef

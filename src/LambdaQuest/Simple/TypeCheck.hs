@@ -3,19 +3,19 @@ import LambdaQuest.Simple.Type
 import LambdaQuest.Common.Type
 
 -- replaces occurrences of TyRef j (j >= i) with TyRef (j + delta)
-typeShift :: Int -> Int -> Type -> Type
+typeShift :: Int -> Int -> TypeT a -> TypeT a
 typeShift delta i t = t
 
-typeSubstD :: Int -> Type -> Int -> Type -> Type
+typeSubstD :: Int -> TypeT a -> Int -> TypeT a -> TypeT a
 typeSubstD depth s i t = t
 
 -- replaces occurrences of TyRef j (j > i) with TyRef (j-1), and TyRef i with the given type
 typeSubst = typeSubstD 0
 
-primTypeOf :: PrimValue -> Type
+primTypeOf :: PrimValue -> TypeT a
 primTypeOf = genPrimTypeOf TyPrim TyArr
 
-typeOf :: [Binding] -> Term -> Either String Type
+typeOf :: (Eq a, Show a) => [BindingT a] -> TermT a -> Either String (TypeT a)
 typeOf ctx tm = case tm of
   TPrimValue primValue -> return (primTypeOf primValue)
   TAbs name argType body -> TyArr argType <$> typeOf (VarBind name argType : ctx) body
