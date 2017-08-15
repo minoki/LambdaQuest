@@ -39,8 +39,12 @@ library
                        LambdaQuest.Finter.Eval,
                        LambdaQuest.Common.Type,
                        LambdaQuest.Common.Parse,
-                       LambdaQuest.Common.Parse.Number
-  build-depends:       base >= 4.7 && < 5, parsec
+                       LambdaQuest.Common.Parse.Number,
+                       LambdaQuest.Simple.Type,
+                       LambdaQuest.Simple.TypeCheck,
+                       LambdaQuest.Simple.TypeRecon,
+                       LambdaQuest.Simple.Parse
+  build-depends:       base >= 4.7 && < 5, parsec, mtl, containers
   ghc-options:         -Wincomplete-patterns
 
 executable SystemF-repl
