@@ -24,7 +24,7 @@ replCommand ctx = termDef <|> typeDef <|> termEval <?> "REPL Command"
       t <- term ctx
       eof
       return (ReplEval t)
-    termDef = do
+    termDef = try $ do
       reserved "let"
       name <- identifier
       reservedOp "="

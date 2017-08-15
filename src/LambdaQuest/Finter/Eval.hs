@@ -20,6 +20,7 @@ termSubstD depth s i t = case t of
               | otherwise -> t
   TApp u v -> TApp (termSubstD depth s i u) (termSubstD depth s i v)
   TTyApp u t -> TTyApp (termSubstD depth s i u) (typeShift (-1) i t)
+  TLet name def body -> TLet name (termSubstD depth s i def) (termSubstD depth s (i + 1) body) -- ?
   TIf cond then_ else_ -> TIf (termSubstD depth s i cond) (termSubstD depth s i then_) (termSubstD depth s i else_)
   TPrimValue _ -> t
   TCoerce x ty  -> TCoerce (termSubstD depth s i x) (typeShift (-1) i ty)
@@ -105,6 +106,9 @@ eval1 ctx t = case t of
         TTyAbs _name _bound body -> return $ termTypeSubst ty 0 body
         _ -> Left "invalid type application (expected forall type)"
     | otherwise -> TTyApp <$> eval1 ctx u <*> pure ty
+  TLet name def body
+    | isValue def -> return $ termSubst def 0 body
+    | otherwise -> TLet name <$> eval1 ctx def <*> pure body
   TIf cond then_ else_
     | isValue cond -> case cond of
         TPrimValue (PVBool True) -> return then_  -- no type checking here

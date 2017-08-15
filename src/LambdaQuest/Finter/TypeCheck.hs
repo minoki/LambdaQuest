@@ -14,6 +14,7 @@ termShift delta i t = case t of
               | otherwise -> t
   TApp u v -> TApp (termShift delta i u) (termShift delta i v)
   TTyApp u t -> TTyApp (termShift delta i u) (typeShift delta i t)
+  TLet name def body -> TLet name (termShift delta i def) (termShift delta (i + 1) body)
   TIf cond then_ else_ -> TIf (termShift delta i cond) (termShift delta i then_) (termShift delta i else_)
   TPrimValue _ -> t
   TCoerce x ty -> TCoerce (termShift delta i x) (typeShift delta i ty)
@@ -29,6 +30,7 @@ termTypeSubstD depth s i t = case t of
   TTyAbs name bound body -> TTyAbs name (typeSubstD depth s i bound) (termTypeSubstD (depth + 1) s (i + 1) body)
   TApp u v -> TApp (termTypeSubstD depth s i u) (termTypeSubstD depth s i v)
   TTyApp u ty -> TTyApp (termTypeSubstD depth s i u) (typeSubstD depth s i ty)
+  TLet name def body -> TLet name (termTypeSubstD depth s i def) (termTypeSubstD (depth + 1) s (i + 1) body)
   TIf cond then_ else_ -> TIf (termTypeSubstD depth s i cond) (termTypeSubstD depth s i then_) (termTypeSubstD depth s i else_)
   TCoerce x ty -> TCoerce (termTypeSubstD depth s i x) (typeSubstD depth s i ty)
   TFor name tys body -> TFor name (typeSubstD depth s i <$> tys) (termTypeSubstD (depth + 1) s (i + 1) body)
@@ -63,6 +65,10 @@ typeOf ctx tm = case tm of
         [] -> Left ("invalid type application (" ++ show t ++ " is not a subtype of " ++ concat (intersperse ", " $ map (show . fst) xs) ++ ")")
         [y] -> return y
         ys -> return $ TyInter ys
+  TLet name def body -> do
+    definedType <- typeOf ctx def
+    let definedType' = normalizeType ctx definedType
+    typeOf (VarBind name definedType' : ctx) body
   TIf cond then_ else_ -> do
     condType <- typeOf ctx cond
     thenType <- typeOf ctx then_
