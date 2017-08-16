@@ -28,7 +28,7 @@ rename ctx name | name `notElem` ctx = name
 -- <2>: Int | Real | Bool | <type variable> | <0>
 -- <1>: <2> -> <1>
 -- <0>: forall a. <0>
-prettyPrintTypeP :: Int -> [NameBinding] -> Type -> ShowS
+prettyPrintTypeP :: (Show a) => Int -> [NameBinding] -> TypeT a -> ShowS
 prettyPrintTypeP p ctx t = case t of
   TyPrim PTyInt -> showString "Int"
   TyPrim PTyReal -> showString "Real"
@@ -41,14 +41,15 @@ prettyPrintTypeP p ctx t = case t of
             | otherwise -> showString "<invalid reference #" . shows i . showString ", index out of range>"
   TyAll name t -> let name' = rename (tyVarNames ctx) name
                   in showParen (p > 0) $ showString "forall " . showString name' . showString ". " . prettyPrintTypeP 0 (NTyVarBind name' : ctx) t
+  TyExtra x -> showsPrec p x
 
-prettyPrintType :: Type -> String
+prettyPrintType :: (Show a) => TypeT a -> String
 prettyPrintType t = prettyPrintTypeP 0 [] t ""
 
 -- <2>: <primitive> | <variable> | (<0>)
 -- <1>: <1> <2> | <1> [ty]
 -- <0>: \x:t. <0> | ?a. <0> | let x = <0> in <0> | if <0> then <0> else <0>
-prettyPrintTermP :: Int -> [NameBinding] -> Term -> ShowS
+prettyPrintTermP :: (Show a) => Int -> [NameBinding] -> TermT a -> ShowS
 prettyPrintTermP p ctx t = case t of
   TPrimValue (PVInt x) -> shows x
   TPrimValue (PVReal x) -> shows x
@@ -86,5 +87,5 @@ prettyPrintTermP p ctx t = case t of
                         in showParen (p > 0) $ showString "let " . showString name' . showString " = " . prettyPrintTermP 0 ctx def . showString " in " . prettyPrintTermP 0 (NVarBind name' : ctx) body
   TIf cond then_ else_ -> showParen (p > 0) $ showString "if " . prettyPrintTermP 0 ctx cond . showString " then " . prettyPrintTermP 0 ctx then_ . showString " else " . prettyPrintTermP 0 ctx else_
 
-prettyPrintTerm :: Term -> String
+prettyPrintTerm :: (Show a) => TermT a -> String
 prettyPrintTerm t = prettyPrintTermP 0 [] t ""

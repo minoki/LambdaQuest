@@ -3,7 +3,7 @@ import LambdaQuest.SystemF.Type
 import LambdaQuest.Common.Type
 
 -- replaces occurrences of TyRef j (j >= i) with TyRef (j + delta)
-typeShift :: Int -> Int -> Type -> Type
+typeShift :: Int -> Int -> TypeT a -> TypeT a
 typeShift delta i t = case t of
   TyPrim _ -> t
   TyArr u v -> TyArr (typeShift delta i u) (typeShift delta (i + 1) v)
@@ -11,9 +11,10 @@ typeShift delta i t = case t of
                | j >= i, j + delta < 0 -> error "typeShift: negative index"
                | otherwise -> t
   TyAll n t -> TyAll n (typeShift delta (i + 1) t)
+  TyExtra _ -> t
 -- typeShift 0 i t == t
 
-typeSubstD :: Int -> Type -> Int -> Type -> Type
+typeSubstD :: Int -> TypeT a -> Int -> TypeT a -> TypeT a
 typeSubstD depth s i t = case t of
   TyPrim _ -> t
   TyArr u v -> TyArr (typeSubstD depth s i u) (typeSubstD (depth + 1) s (i + 1) v)
@@ -21,11 +22,12 @@ typeSubstD depth s i t = case t of
                | j > i -> TyRef (j - 1) name
                | otherwise -> t
   TyAll n t -> TyAll n (typeSubstD (depth + 1) s (i + 1) t)
+  TyExtra _ -> t
 
 -- replaces occurrences of TyRef j (j > i) with TyRef (j-1), and TyRef i with the given type
 typeSubst = typeSubstD 0
 
-primTypeOf :: PrimValue -> Type
+primTypeOf :: PrimValue -> TypeT a
 primTypeOf = genPrimTypeOf TyPrim TyArr
 
 typeOf :: [Binding] -> Term -> Either String Type

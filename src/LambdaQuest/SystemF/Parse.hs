@@ -4,9 +4,18 @@ import Text.Parsec
 import qualified Text.Parsec.Token as PT
 import Data.List (elemIndex)
 import Data.Foldable (foldl')
+import Data.Void
 import qualified LambdaQuest.Common.Parse as CP
 
 type Parser = Parsec String ()
+
+class ExtraTypeParser x where
+  extraSimpleTypeExpr :: Parser (TypeT x)
+  defaultType :: Parser (TypeT x)
+  extraSimpleTypeExpr = parserZero
+  defaultType = parserZero
+
+instance ExtraTypeParser Void
 
 data NameBinding = NVarBind String
                  | NAnonymousBind
@@ -57,7 +66,7 @@ braces = PT.braces tokenParser
 brackets = PT.brackets tokenParser
 whiteSpace = PT.whiteSpace tokenParser
 
-simpleTypeExpr :: [NameBinding] -> Parser Type
+simpleTypeExpr :: (ExtraTypeParser a) => [NameBinding] -> Parser (TypeT a)
 simpleTypeExpr ctx = (reserved "Int" >> return TyInt)
                      <|> (reserved "Real" >> return TyReal)
                      <|> (reserved "Bool" >> return TyBool)
@@ -67,15 +76,16 @@ simpleTypeExpr ctx = (reserved "Int" >> return TyInt)
                              case NTyVarBind name `elemIndex` ctx of
                                Just i -> return (TyRef i name)
                                Nothing -> fail ("undefined type variable: " ++ name))
+                     <|> extraSimpleTypeExpr
                      <?> "simple type expression"
 
-arrTypeExpr :: [NameBinding] -> Parser Type
+arrTypeExpr :: (ExtraTypeParser a) => [NameBinding] -> Parser (TypeT a)
 arrTypeExpr ctx = do a <- simpleTypeExpr ctx
                      (reservedOp "->" >> (TyArr a <$> arrTypeExpr (NAnonymousBind : ctx)))
                        <|> return a
                   <?> "type expression"
 
-typeExpr :: [NameBinding] -> Parser Type
+typeExpr :: (ExtraTypeParser a) => [NameBinding] -> Parser (TypeT a)
 typeExpr ctx = forallExpr <|> arrTypeExpr ctx
                <?> "type expression"
   where forallExpr = do reserved "forall"
@@ -84,7 +94,7 @@ typeExpr ctx = forallExpr <|> arrTypeExpr ctx
                         t <- typeExpr (NTyVarBind name : ctx)
                         return (TyAll name t)
 
-simpleTerm :: [NameBinding] -> Parser Term
+simpleTerm :: (ExtraTypeParser a) => [NameBinding] -> Parser (TermT a)
 simpleTerm ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
                  <|> (reserved "False" >> return (TPrimValue $ PVBool False))
                  <|> (either (TPrimValue . PVInt) (TPrimValue . PVReal) <$> naturalOrFloat <?> "number")
@@ -97,13 +107,13 @@ simpleTerm ctx = (reserved "True" >> return (TPrimValue $ PVBool True))
                  <?> "simple expression"
 
 -- function application / type application
-appTerm :: [NameBinding] -> Parser Term
+appTerm :: (ExtraTypeParser a) => [NameBinding] -> Parser (TermT a)
 appTerm ctx = do x <- simpleTerm ctx
                  xs <- many ((flip TApp <$> simpleTerm ctx)
                               <|> (flip TTyApp <$> brackets (typeExpr ctx)))
                  return (foldl' (flip ($)) x xs)
 
-term :: [NameBinding] -> Parser Term
+term :: (ExtraTypeParser a) => [NameBinding] -> Parser (TermT a)
 term ctx = lambdaAbstraction
            <|> typeAbstraction
            <|> letIn
@@ -112,8 +122,7 @@ term ctx = lambdaAbstraction
            <?> "expression"
   where lambdaAbstraction = do reservedOp "\\"
                                name <- identifier
-                               reservedOp ":"
-                               varType <- typeExpr ctx
+                               varType <- (reservedOp ":" >> typeExpr ctx) <|> defaultType
                                reservedOp "."
                                body <- term (NVarBind name : ctx)
                                return (TAbs name varType body)
