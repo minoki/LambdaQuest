@@ -60,7 +60,7 @@ constraints ctx tm = case tm of
     case condType of
       TyBool | thenType == elseType -> return thenType
              | otherwise -> tell [(thenType, elseType)] >> return thenType
-      _ -> tell [(condType, TyBool)] >> return thenType
+      _ -> tell [(condType, TyBool), (thenType, elseType)] >> return thenType
 
   -- UTyAnn x ty -> do
   --   xt <- constraints ctx x
