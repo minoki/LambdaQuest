@@ -76,11 +76,7 @@ freeVars :: UType -> [Int]
 freeVars = foldMap (\(IndexedTypeHole i) -> [i])
 
 replaceHole :: Int -> UType -> UType -> UType
-replaceHole i s t = case t of
-  TyPrim _ -> t
-  TyArr u v -> TyArr (replaceHole i s u) (replaceHole i s v)
-  TyExtra (IndexedTypeHole j) | i == j -> s
-                              | otherwise -> t
+replaceHole i s t = t >>= (\u@(IndexedTypeHole j) -> if i == j then s else TyExtra u)
 
 replaceHoleP :: Int -> UType -> (UType,UType) -> (UType,UType)
 replaceHoleP i s (t0,t1) = (replaceHole i s t0, replaceHole i s t1)
@@ -95,11 +91,7 @@ unify ((s,t):xs) m
   | otherwise = Nothing
 
 applyUnificationResultTy :: Map.Map Int UType -> UType -> UType
-applyUnificationResultTy m t = case t of
-  TyPrim _ -> t
-  TyArr u v -> TyArr (applyUnificationResultTy m u) (applyUnificationResultTy m v)
-  TyExtra (IndexedTypeHole i) | Just r <- Map.lookup i m -> r
-                              | otherwise -> t
+applyUnificationResultTy m t = t >>= (\u@(IndexedTypeHole i) -> Map.findWithDefault (TyExtra u) i m)
 
 applyUnificationResultTm :: Map.Map Int UType -> UTerm -> UTerm
 applyUnificationResultTm m = tyMapOnTerm (applyUnificationResultTy m)

@@ -49,6 +49,21 @@ isValue t = case t of
   TApp (TPrimValue (PVBuiltinBinary _)) x -> isValue x -- partial application
   _ -> False
 
+instance Applicative TypeT where
+  pure = TyExtra
+  TyExtra f <*> t = fmap f t
+  s <*> t = case t of
+    TyPrim p -> TyPrim p
+    TyArr u v -> TyArr (s <*> u) (s <*> v)
+    TyExtra x -> fmap ($ x) s
+
+instance Monad TypeT where
+  return = TyExtra
+  m >>= g = case m of
+    TyPrim p -> TyPrim p
+    TyArr u v -> TyArr (u >>= g) (v >>= g)
+    TyExtra x -> g x
+
 tyMapOnTerm :: (TypeT a -> TypeT b) -> TermT a -> TermT b
 tyMapOnTerm f = g
   where
