@@ -37,7 +37,7 @@ meetTypeC ctx = rr
     r :: ICanonicalType -> [ICanonicalType] -> (Bool,[ICanonicalType])
     r x [] = (True,[])
     r x (y:ys) | subTypeI ctx x y = r x ys -- delete y
-               | subTypeI ctx y x = (False,ys) -- delete x
+               | subTypeI ctx y x = (False,y:ys) -- delete x
                | otherwise = (y :) <$> r x ys
     rr :: [ICanonicalType] -> [ICanonicalType] -> [ICanonicalType]
     rr [] ys = ys
