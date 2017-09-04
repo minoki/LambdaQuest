@@ -22,6 +22,7 @@ library
                        LambdaQuest.SystemF.Parse,
                        LambdaQuest.SystemF.TypeCheck,
                        LambdaQuest.SystemF.Eval,
+                       -- LambdaQuest.SystemF.TypeRecon,
                        LambdaQuest.SystemFsub,
                        LambdaQuest.SystemFsub.Type,
                        LambdaQuest.SystemFsub.Subtype,
@@ -43,7 +44,10 @@ library
                        LambdaQuest.Simple.Type,
                        LambdaQuest.Simple.TypeCheck,
                        LambdaQuest.Simple.TypeRecon,
-                       LambdaQuest.Simple.Parse
+                       LambdaQuest.Simple.Parse,
+                       LambdaQuest.LetPoly.Type,
+                       LambdaQuest.LetPoly.TypeCheck,
+                       LambdaQuest.LetPoly.Parse
   build-depends:       base >= 4.7 && < 5, parsec, mtl, containers
   ghc-options:         -Wincomplete-patterns
 
@@ -104,6 +108,26 @@ executable Finter-repl
                        LambdaQuest.Common.Parse,
                        LambdaQuest.Common.Parse.Number
   build-depends:       base >= 4.7 && < 5, parsec, readline
+  ghc-options:         -Wincomplete-patterns
+
+executable LetPoly-repl
+  hs-source-dirs:      src
+  main-is:             LetPoly-repl.hs
+  default-language:    Haskell2010
+  other-modules:       LambdaQuest.SystemF,
+                       LambdaQuest.SystemF.Type,
+                       LambdaQuest.SystemF.PrettyPrint,
+                       LambdaQuest.SystemF.Parse,
+                       LambdaQuest.SystemF.TypeCheck,
+                       LambdaQuest.SystemF.Eval,
+                       LambdaQuest.Common.Type,
+                       LambdaQuest.Common.Parse,
+                       LambdaQuest.Common.Parse.Number,
+                       LambdaQuest.LetPoly.Type,
+                       LambdaQuest.LetPoly.TypeCheck,
+                       LambdaQuest.LetPoly.Parse,
+                       LambdaQuest.LetPoly.PrettyPrint
+  build-depends:       base >= 4.7 && < 5, parsec, readline, mtl, containers
   ghc-options:         -Wincomplete-patterns
 
 test-suite SystemF-test
