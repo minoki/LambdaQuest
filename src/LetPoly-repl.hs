@@ -5,6 +5,7 @@ import LambdaQuest.LetPoly.Type
 import LambdaQuest.LetPoly.Parse
 import LambdaQuest.LetPoly.PrettyPrint
 import LambdaQuest.LetPoly.TypeCheck
+import qualified LambdaQuest.LetPoly.TranslateF as TF
 import qualified LambdaQuest.SystemF as F
 import qualified LambdaQuest.SystemF.Parse as F
 import qualified LambdaQuest.SystemF.PrettyPrint as F
@@ -19,12 +20,18 @@ import qualified Data.Map as Map
 import System.Console.Readline (readline,addHistory) -- from `readline' package
 
 data ReplCommand = ReplEval HTerm
+                 | ReplTranslateF HTerm
                  -- | ReplTermDef String Term
                  -- | ReplTypeDef String Type
 
 replCommand :: [NameBinding] -> Parser ReplCommand
-replCommand ctx = {-termDef <|> typeDef <|>-} termEval <?> "REPL Command"
+replCommand ctx = translateF <|> termEval <?> "REPL Command"
   where
+    translateF = do
+      reserved "translateF"
+      t <- term ctx
+      eof
+      return (ReplTranslateF t)
     termEval = do
       whiteSpace
       t <- term ctx
@@ -97,6 +104,28 @@ repl ctx = do
               --putStrLn "Evaluation:"
               --putStrLn (prettyPrintTerm tm')
               --evalLoop tm'
+              repl ctx
+        Right (ReplTranslateF tm) ->
+          let a = do tm' <- assignTypeIdTm tm
+                     let ctx = [] :: [UBinding]
+                     (tm'',ty) <- TF.constraints ctx tm'
+                     TF.generalizeTm ctx tm'' ty
+              initialState = TypeInferenceState [] 0 Map.empty
+          in case runState (runExceptT a) initialState of
+            (Left error, st) -> do
+              putStrLn $ "Type error: " ++ error
+              repl ctx
+            (Right (tm,tySc), st) -> do
+              putStrLn $ "Type is " ++ prettyPrintTypeSchemeP 0 [] tySc "."
+              putStrLn $ F.prettyPrintTermP 0 [] tm "."
+              let tm' = traverse (\_ -> Nothing) tm
+              case F.typeOf [] <$> tm' of
+                Nothing -> do
+                  putStrLn $ "Resulting term has a free type variable "
+                Just (Left error) -> do
+                  putStrLn $ "[System F] Type error: " ++ error
+                Just (Right ty) -> do
+                  putStrLn $ "[System F] Type is " ++ F.prettyPrintTypeP 0 [] ty "."
               repl ctx
         {-
         Right (ReplTermDef name tm) -> do

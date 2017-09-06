@@ -47,7 +47,9 @@ library
                        LambdaQuest.Simple.Parse,
                        LambdaQuest.LetPoly.Type,
                        LambdaQuest.LetPoly.TypeCheck,
-                       LambdaQuest.LetPoly.Parse
+                       LambdaQuest.LetPoly.Parse,
+                       LambdaQuest.LetPoly.PrettyPrint,
+                       LambdaQuest.LetPoly.TranslateF
   build-depends:       base >= 4.7 && < 5, parsec, mtl, containers
   ghc-options:         -Wincomplete-patterns
 
@@ -126,7 +128,8 @@ executable LetPoly-repl
                        LambdaQuest.LetPoly.Type,
                        LambdaQuest.LetPoly.TypeCheck,
                        LambdaQuest.LetPoly.Parse,
-                       LambdaQuest.LetPoly.PrettyPrint
+                       LambdaQuest.LetPoly.PrettyPrint,
+                       LambdaQuest.LetPoly.TranslateF
   build-depends:       base >= 4.7 && < 5, parsec, readline, mtl, containers
   ghc-options:         -Wincomplete-patterns
 
