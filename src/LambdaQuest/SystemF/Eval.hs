@@ -33,14 +33,14 @@ termTypeSubst = termTypeSubstD 0
 
 termSubstD :: Int -> Term -> Int -> Term -> Term
 termSubstD depth s i t = case t of
-  TAbs name ty body -> TAbs name (typeShift (-1) i ty) (termSubstD depth s (i + 1) body)
-  TTyAbs name body -> TTyAbs name (termSubstD depth s (i + 1) body)
+  TAbs name ty body -> TAbs name (typeShift (-1) i ty) (termSubstD (depth + 1) s (i + 1) body)
+  TTyAbs name body -> TTyAbs name (termSubstD (depth + 1) s (i + 1) body)
   TRef j name | j == i -> termShift depth 0 s
               | j > i -> TRef (j - 1) name
               | otherwise -> t
   TApp u v -> TApp (termSubstD depth s i u) (termSubstD depth s i v)
   TTyApp u t -> TTyApp (termSubstD depth s i u) t
-  TLet name def body -> TLet name (termSubstD depth s i def) (termSubstD depth s (i + 1) body) -- ?
+  TLet name def body -> TLet name (termSubstD depth s i def) (termSubstD (depth + 1) s (i + 1) body)
   TIf cond then_ else_ -> TIf (termSubstD depth s i cond) (termSubstD depth s i then_) (termSubstD depth s i else_)
   TPrimValue _ -> t
 
