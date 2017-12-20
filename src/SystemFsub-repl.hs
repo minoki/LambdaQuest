@@ -13,7 +13,7 @@ import qualified LambdaQuest.SystemF.Parse as F
 import Control.Monad (when)
 import System.IO
 import Text.Parsec
-import System.Console.Readline (readline,addHistory) -- from `readline' package
+import System.Console.Haskeline -- from `haskeline' package
 
 data ReplCommand = ReplEval Term
                  | ReplTermDef String Term
@@ -74,52 +74,51 @@ resolveTypeAliasesInTerm [] _ = id
 resolveTypeAliasesInTerm (Let name m ty : xs) i = resolveTypeAliasesInTerm xs (i + 1)
 resolveTypeAliasesInTerm (TypeDef name ty : xs) i = resolveTypeAliasesInTerm xs (i + 1) . resolveTypeAliasInTerm ty i
 
-repl :: [REPLBinding] -> IO ()
+repl :: [REPLBinding] -> InputT IO ()
 repl ctx = do
-  mline <- readline "> "
+  mline <- getInputLine "> "
   case mline of
-    Nothing -> putStrLn "Bye!" -- EOF / Ctrl-D
+    Nothing -> outputStrLn "Bye!" -- EOF / Ctrl-D
     Just line -> do
-      addHistory line
       case parse (replCommand (map toNameBinding ctx)) "<stdin>" line of
         Left error -> do
-          print error -- parse error
+          outputStrLn $ show error -- parse error
           repl ctx
         Right (ReplEval tm) -> let tm' = resolveTypeAliasesInTerm ctx 0 tm
           in case typeOf (map toBinding ctx) tm' of
                Left error -> do
-                 putStrLn $ "Type error: " ++ error
+                 outputStrLn $ "Type error: " ++ error
                  repl ctx
                Right ty -> do
-                 putStrLn $ "Type is " ++ prettyPrintType ty ++ "."
-                 putStrLn "Evaluation:"
-                 putStrLn (prettyPrintTerm tm')
+                 outputStrLn $ "Type is " ++ prettyPrintType ty ++ "."
+                 outputStrLn "Evaluation:"
+                 outputStrLn (prettyPrintTerm tm')
                  evalLoop tm'
                  repl ctx
         Right (ReplTermDef name tm) -> let tm' = resolveTypeAliasesInTerm ctx 0 tm
           in case typeOf (map toBinding ctx) tm' of
                Left error -> do
-                 putStrLn $ "Type error: " ++ error
+                 outputStrLn $ "Type error: " ++ error
                  repl ctx
                Right ty -> do
-                 putStrLn $ name ++ " : " ++ prettyPrintType ty ++ "."
-                 putStrLn "Evaluation:"
-                 putStrLn (prettyPrintTerm tm')
+                 outputStrLn $ name ++ " : " ++ prettyPrintType ty ++ "."
+                 outputStrLn "Evaluation:"
+                 outputStrLn (prettyPrintTerm tm')
                  result <- evalLoop tm'
                  case result of
                    Just value -> repl (Let name value ty : ctx)
                    Nothing -> repl ctx
         Right (ReplTypeDef name ty) -> do
-            putStrLn $ name ++ " := " ++ prettyPrintType ty ++ "."
+            outputStrLn $ name ++ " := " ++ prettyPrintType ty ++ "."
             repl (TypeDef name ty : ctx)
         Right (ReplTranslate tm) -> let tm' = resolveTypeAliasesInTerm ctx 0 tm
           in case C.mapTerm (map toBinding ctx) tm' of
                Left error -> do
-                 putStrLn $ "Type error: " ++ error
+                 outputStrLn $ "Type error: " ++ error
                  repl ctx
                Right (tr, ty) -> do
-                 putStrLn $ "[System Fsub] Type is " ++ prettyPrintType ty ++ "."
-                 putStrLn $ "Translation to System F: " ++ F.prettyPrintTermP 0 (map toNameBindingF ctx) tr "" ++ "."
+                 outputStrLn $ "[System Fsub] Type is " ++ prettyPrintType ty ++ "."
+                 outputStrLn $ "Translation to System F: " ++ F.prettyPrintTermP 0 (map toNameBindingF ctx) tr "" ++ "."
                  let bf (VarBind n ty : ctx) = F.VarBind n (C.mapType ctx ty) : bf ctx
                      bf (TyVarBind n _ : ctx) = F.TyVarBind n : bf ctx
                      bf (AnonymousBind : ctx) = F.AnonymousBind : bf ctx
@@ -127,31 +126,31 @@ repl ctx = do
                      expectedType = C.mapType (map toBinding ctx) ty
                  case F.typeOf (bf $ map toBinding ctx) tr of
                    Left error -> do
-                     putStrLn $ "[System F] Type error: " ++ error
-                     putStrLn $ "[System F] (Type should be " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) expectedType "" ++ ".)"
+                     outputStrLn $ "[System F] Type error: " ++ error
+                     outputStrLn $ "[System F] (Type should be " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) expectedType "" ++ ".)"
                    Right ty' | ty' == expectedType -> do
-                                 putStrLn $ "[System F] Type is " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) ty' "" ++ "."
+                                 outputStrLn $ "[System F] Type is " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) ty' "" ++ "."
                              | otherwise -> do
-                                 putStrLn $ "Type mismatch between the translator and System F's type checker:"
-                                 putStrLn $ "[Translator] " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) expectedType ""
-                                 putStrLn $ "[System F type checker] " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) ty' ""
+                                 outputStrLn $ "Type mismatch between the translator and System F's type checker:"
+                                 outputStrLn $ "[Translator] " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) expectedType ""
+                                 outputStrLn $ "[System F type checker] " ++ F.prettyPrintTypeP 0 (map toNameBindingF ctx) ty' ""
                  repl ctx
   where
     prettyPrintType t = prettyPrintTypeP 0 (map toNameBinding ctx) t ""
     prettyPrintTerm t = prettyPrintTermP 0 (map toNameBinding ctx) t ""
-    evalLoop :: Term -> IO (Maybe Term)
+    evalLoop :: Term -> InputT IO (Maybe Term)
     evalLoop t = case eval1 (map toValueBinding ctx) t of
-      Left error -> do putStrLn $ "Evaluation error: " ++ error
+      Left error -> do outputStrLn $ "Evaluation error: " ++ error
                        return Nothing
       Right t' | isValue t' -> do
-                   putStrLn $ "--> " ++ prettyPrintTerm t' ++ "."
+                   outputStrLn $ "--> " ++ prettyPrintTerm t' ++ "."
                    return (Just t')
                | otherwise -> do
-                   putStrLn $ "--> " ++ prettyPrintTerm t'
+                   outputStrLn $ "--> " ++ prettyPrintTerm t'
                    evalLoop t'
 
 main :: IO ()
-main = do
-  putStrLn "This is System Fsub REPL."
-  putStrLn "Press Ctrl-D to exit."
+main = runInputT defaultSettings $ do
+  outputStrLn "This is System Fsub REPL."
+  outputStrLn "Press Ctrl-D to exit."
   repl []

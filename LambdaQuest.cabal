@@ -66,7 +66,7 @@ executable SystemF-repl
                        LambdaQuest.Common.Type,
                        LambdaQuest.Common.Parse,
                        LambdaQuest.Common.Parse.Number
-  build-depends:       base >= 4.7 && < 5, parsec, readline
+  build-depends:       base >= 4.7 && < 5, parsec, haskeline
   ghc-options:         -Wincomplete-patterns
 
 executable SystemFsub-repl
@@ -90,7 +90,7 @@ executable SystemFsub-repl
                        LambdaQuest.Common.Type,
                        LambdaQuest.Common.Parse,
                        LambdaQuest.Common.Parse.Number
-  build-depends:       base >= 4.7 && < 5, parsec, readline
+  build-depends:       base >= 4.7 && < 5, parsec, haskeline
   ghc-options:         -Wincomplete-patterns
 
 executable Finter-repl
@@ -109,7 +109,7 @@ executable Finter-repl
                        LambdaQuest.Common.Type,
                        LambdaQuest.Common.Parse,
                        LambdaQuest.Common.Parse.Number
-  build-depends:       base >= 4.7 && < 5, parsec, readline
+  build-depends:       base >= 4.7 && < 5, parsec, haskeline
   ghc-options:         -Wincomplete-patterns
 
 executable LetPoly-repl
@@ -130,7 +130,7 @@ executable LetPoly-repl
                        LambdaQuest.LetPoly.Parse,
                        LambdaQuest.LetPoly.PrettyPrint,
                        LambdaQuest.LetPoly.TranslateF
-  build-depends:       base >= 4.7 && < 5, parsec, readline, mtl, containers
+  build-depends:       base >= 4.7 && < 5, parsec, haskeline, mtl, containers
   ghc-options:         -Wincomplete-patterns
 
 test-suite SystemF-test
